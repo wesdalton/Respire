@@ -1,0 +1,26 @@
+{
+  "name": "burnout-predictor",
+  "version": "1.0.0",
+  "description": "A burnout predictor that combines Whoop physiological data with self-reported mood to identify burnout risk",
+  "main": "app.py",
+  "scripts": {
+    "start": "python app.py",
+    "test": "pytest"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "burnout",
+    "health",
+    "wellness",
+    "whoop",
+    "mood",
+    "tracking"
+  ]
+}
