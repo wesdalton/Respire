@@ -217,24 +217,25 @@ document.addEventListener('DOMContentLoaded', function() {
     display: block;
 }
 
-.mood-emoji-option:nth-child(-n+2) i {
-    color: #dc3545;
+/* Emoji colors */
+.mood-emoji-grid .col:nth-child(-n+2) .mood-emoji-option i {
+    color: #dc3545; /* Red */
 }
 
-.mood-emoji-option:nth-child(n+3):nth-child(-n+4) i {
-    color: #e67c22;
+.mood-emoji-grid .col:nth-child(n+3):nth-child(-n+4) .mood-emoji-option i {
+    color: #e67c22; /* Orange */
 }
 
-.mood-emoji-option:nth-child(n+5):nth-child(-n+6) i {
-    color: #ffc107;
+.mood-emoji-grid .col:nth-child(n+5):nth-child(-n+6) .mood-emoji-option i {
+    color: #ffc107; /* Yellow */
 }
 
-.mood-emoji-option:nth-child(n+7):nth-child(-n+8) i {
-    color: #28a745;
+.mood-emoji-grid .col:nth-child(n+7):nth-child(-n+8) .mood-emoji-option i {
+    color: #28a745; /* Green */
 }
 
-.mood-emoji-option:nth-child(n+9) i {
-    color: #20c997;
+.mood-emoji-grid .col:nth-child(n+9) .mood-emoji-option i {
+    color: #20c997; /* Teal */
 }
 
 .mood-value {
