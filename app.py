@@ -720,8 +720,8 @@ def update_openai_key():
             
             for line in env_lines:
                 if line.startswith('OPENAI_API_KEY='):
-                    # Update the key
-                    new_lines.append(f'OPENAI_API_KEY="{api_key}"\n')
+                    # Update the key (without quotes to avoid double-quoting)
+                    new_lines.append(f'OPENAI_API_KEY={api_key}\n')
                     key_found = True
                 elif line.startswith('OPENAI_MODEL='):
                     # Update the model
@@ -732,7 +732,7 @@ def update_openai_key():
             
             # Add the key if not found
             if not key_found:
-                new_lines.append(f'OPENAI_API_KEY="{api_key}"\n')
+                new_lines.append(f'OPENAI_API_KEY={api_key}\n')
             
             # Add the model if not found
             if not model_found:

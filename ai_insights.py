@@ -25,7 +25,10 @@ class BurnoutInsightsEngine:
     
     def __init__(self, api_key=None):
         """Initialize the insights engine with OpenAI API key."""
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        # Get API key from param or env, and clean it
+        raw_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = raw_key.strip().strip('"\'') if raw_key else None
+        
         if not self.api_key:
             logger.warning("No OpenAI API key provided. AI insights will not be available.")
         else:
@@ -284,10 +287,16 @@ def get_burnout_insights(metrics_data, query=None):
     load_dotenv(override=True)
     
     # Set the API key if it's in the environment
-    api_key = os.getenv("OPENAI_API_KEY")
-    if api_key and api_key.strip():
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    
+    # Remove any quotes from the API key if present (common in .env files)
+    if api_key:
+        api_key = api_key.strip().strip('"\'')
+        
+    if api_key:
         logger.info(f"Found API key in environment: {api_key[:5]}...{api_key[-5:] if len(api_key) > 10 else ''}")
-        insights_engine = BurnoutInsightsEngine(api_key.strip())
+        # Re-initialize insights engine with clean API key
+        insights_engine = BurnoutInsightsEngine(api_key)
     
     return insights_engine.generate_insight(metrics_data, query)
 
