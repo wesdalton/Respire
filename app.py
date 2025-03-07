@@ -12,6 +12,9 @@ import uuid
 import logging
 from functools import wraps
 from dotenv import load_dotenv
+
+# Always load environment variables at the very start of the application
+load_dotenv(override=True)
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # Import Supabase client
@@ -1083,7 +1086,7 @@ def test_whoop_api():
 def ai_insights():
     """
     Get AI-powered insights about the user's burnout risk and metrics.
-    Accepts optional query for specific questions about the data.
+    Loads the page immediately and fetches insights asynchronously.
     """
     user_id = get_user_id()
     query = None
@@ -1091,6 +1094,31 @@ def ai_insights():
     if request.method == 'POST':
         # Get user query if provided
         query = request.form.get('query')
+        
+        # For POST requests with AJAX, generate and return insights
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                # Get user data
+                records_data = get_daily_metrics(user_id)
+                
+                if not records_data:
+                    return jsonify({
+                        "success": False,
+                        "error": "No data available for analysis",
+                        "insight": "Please add some health data before requesting insights."
+                    })
+                
+                # Generate insights
+                insights_response = get_burnout_insights(records_data, query)
+                return jsonify(insights_response)
+                
+            except Exception as e:
+                logger.error(f"Error in AI insights API: {str(e)}")
+                return jsonify({
+                    "success": False,
+                    "error": str(e),
+                    "insight": "An error occurred while generating AI insights."
+                })
     
     try:
         # Get user data from the database (last 30 days)
@@ -1107,31 +1135,19 @@ def ai_insights():
             flash("No data available for AI analysis.")
             return redirect(url_for('dashboard'))
         
-        # Get insights
-        insights_response = get_burnout_insights(records, query)
-        
-        # Check if API call was successful
-        if insights_response.get('success'):
-            # Return insights data as JSON if it's an AJAX request
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify(insights_response)
-            
-            # Otherwise render the insights template
-            return render_template(
-                'ai_insights.html',
-                insights=insights_response.get('insight'),
-                records=records[:7],  # Show last 7 days of data
-                query=query,
-                now=datetime.now()
-            )
-        else:
-            error_message = insights_response.get('error', 'Unknown error')
-            flash(f"Could not generate insights: {error_message}")
-            return redirect(url_for('dashboard'))
+        # Render the page immediately with loading state
+        # The insights will be fetched via AJAX after the page loads
+        return render_template(
+            'ai_insights.html',
+            insights=None,  # Set to None to show loading animation
+            records=records[:7],  # Show last 7 days of data
+            query=query,
+            now=datetime.now()
+        )
             
     except Exception as e:
         logger.error(f"Error in AI insights route: {str(e)}")
-        flash(f"Error generating insights: {str(e)}")
+        flash(f"Error accessing your data: {str(e)}")
         return redirect(url_for('dashboard'))
 
 @app.route('/api/insights', methods=['POST'])
@@ -1155,34 +1171,70 @@ def api_insights():
         
         if not records_data:
             logger.warning(f"No data available for user {user_id}")
-            return jsonify({
+            
+            # Ensure response has success=false flag
+            response = {
+                "success": False,
                 "error": "No data available for analysis",
                 "insight": "Please add some health data before requesting insights."
-            })
+            }
+            logger.info(f"Sending API response to frontend: {response}")
+            return jsonify(response)
         
         logger.info(f"Retrieved {len(records_data)} records for AI analysis")
         
         # Get insights
-        insights_response = get_burnout_insights(records_data, query)
-        
-        # Log success or failure
-        if insights_response.get('success'):
-            logger.info(f"Successfully generated insights for user {user_id}")
-            insight_preview = insights_response.get('insight', '')[:50] + '...' if insights_response.get('insight') else ''
-            logger.debug(f"Insight preview: {insight_preview}")
-        else:
-            logger.warning(f"Failed to generate insights: {insights_response.get('error')}")
-        
-        return jsonify(insights_response)
+        try:
+            insights_response = get_burnout_insights(records_data, query)
+            
+            # Validate response structure - ensure it has the success flag
+            if 'success' not in insights_response:
+                logger.warning("Missing success flag in insights response, adding...")
+                if 'error' in insights_response:
+                    insights_response['success'] = False
+                else:
+                    insights_response['success'] = True
+                    
+            # Ensure there's always an insight field, even if empty
+            if 'insight' not in insights_response:
+                insights_response['insight'] = ""
+            
+            # Log success or failure
+            if insights_response.get('success'):
+                logger.info(f"Successfully generated insights for user {user_id}")
+                insight_preview = insights_response.get('insight', '')[:50] + '...' if insights_response.get('insight') else ''
+                logger.debug(f"Insight preview: {insight_preview}")
+            else:
+                logger.warning(f"Failed to generate insights: {insights_response.get('error')}")
+            
+            # Debug the response going to the frontend
+            logger.info(f"Sending API response to frontend: {insights_response}")
+            
+            return jsonify(insights_response)
+        except Exception as e:
+            logger.error(f"Error in get_burnout_insights: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            error_response = {
+                "success": False,
+                "error": f"Error generating insights: {str(e)}",
+                "insight": "An error occurred while generating AI insights. Please try again later."
+            }
+            logger.info(f"Sending error response to frontend: {error_response}")
+            return jsonify(error_response)
         
     except Exception as e:
         logger.error(f"Error in API insights route: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
-        return jsonify({
+        error_response = {
+            "success": False,  # Ensure this has the success flag
             "error": "Internal server error",
             "insight": "Something went wrong while analyzing your data. Please try again later."
-        })
+        }
+        logger.info(f"Sending error response to frontend: {error_response}")
+        return jsonify(error_response)
 
 @app.route('/client-auth')
 @login_required

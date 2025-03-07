@@ -39,11 +39,13 @@
                                     {% if insights %}
                                     {{ insights|safe }}
                                     {% else %}
-                                    <div class="text-center py-2">
-                                        <div class="spinner-border text-primary" role="status">
+                                    <div class="text-center py-4">
+                                        <div class="pulsating-circle mb-3"></div>
+                                        <div class="spinner-border text-primary mb-3" role="status">
                                             <span class="visually-hidden">Loading...</span>
                                         </div>
-                                        <p class="mb-0">Analyzing your data...</p>
+                                        <p class="mb-0">Analyzing your health data and generating personalized insights...</p>
+                                        <p class="small text-muted mt-2">This may take a few seconds</p>
                                     </div>
                                     {% endif %}
                                 </div>
@@ -279,6 +281,45 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-5px); }
 }
+
+/* Pulsating circle animation */
+.pulsating-circle {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(13, 110, 253, 0.2);
+    border-radius: 50%;
+    margin: 0 auto;
+    animation: pulsate 1.5s ease-out infinite;
+    position: relative;
+}
+
+.pulsating-circle:before {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(13, 110, 253, 0.4);
+    border-radius: 50%;
+    top: 10px;
+    left: 10px;
+}
+
+.pulsating-circle:after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: rgba(13, 110, 253, 0.8);
+    border-radius: 50%;
+    top: 17.5px;
+    left: 17.5px;
+}
+
+@keyframes pulsate {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}
 </style>
 {% endblock %}
 
@@ -286,13 +327,55 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Convert initial markdown content to HTML
+        // Handle initial insights loading
         const initialInsight = document.getElementById('initial-insight');
+        
+        // Check if we already have insights or need to fetch them
         if (initialInsight) {
             const markdownContent = initialInsight.innerHTML.trim();
             if (markdownContent && !markdownContent.includes('spinner-border')) {
+                // We already have insights from server
                 initialInsight.innerHTML = marked.parse(markdownContent);
+            } else {
+                // Need to fetch insights asynchronously
+                fetchInitialInsights();
             }
+        }
+        
+        // Function to fetch initial insights
+        function fetchInitialInsights() {
+            fetch('/api/insights', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the initial insight with the fetched content
+                    initialInsight.innerHTML = marked.parse(data.insight);
+                } else {
+                    // Display error message
+                    initialInsight.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${data.error || 'Could not generate insights. Please try again later.'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching initial insights:", error);
+                initialInsight.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error connecting to the server. Please try again later.
+                    </div>
+                `;
+            });
         }
         
         const chatMessages = document.getElementById('chat-messages');
