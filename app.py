@@ -539,11 +539,11 @@ def delete_mood(selected_date):
                 
                 # Create updated record without mood data by making a direct PATCH call to Supabase
                 # This ensures the mood_rating is set to NULL in the database
-                from supabase_client import supabase_client
+                from supabase_client import supabase
                 
                 try:
                     # Direct PATCH request to set mood_rating to null
-                    response = supabase_client.table("daily_metrics").update({
+                    response = supabase.table("daily_metrics").update({
                         "mood_rating": None,
                         "notes": None,
                         "updated_at": datetime.now().isoformat()
