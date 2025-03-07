@@ -1,32 +1,38 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session as flask_session
 from datetime import date, datetime, timedelta
-from database import session, DailyMetrics, add_or_update_daily_metrics, User, Base, engine
 from whoop_api import (
-    get_all_daily_metrics, get_auth_url, save_token_to_env, 
-    get_client_credentials_token, get_valid_access_token, REDIRECT_URI
+    get_all_daily_metrics, get_auth_url, get_client_credentials_token, 
+    get_valid_access_token, REDIRECT_URI
 )
 from analysis import compute_correlation, generate_time_series_plot, generate_correlation_plot, get_burnout_risk_score
+from ai_insights import get_burnout_insights
 import os
 import requests
 import uuid
+import logging
 from functools import wraps
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# Try to import Supabase client
-try:
-    from supabase_client import (
-        sign_up, sign_in, sign_out, get_current_user, 
-        save_daily_metrics, get_daily_metrics, get_metrics_range,
-        save_whoop_token, get_whoop_token
-    )
-    USE_SUPABASE = True
-    print("Using Supabase for authentication and storage")
-except ImportError:
-    USE_SUPABASE = False
-    print("Using SQLite for storage (Supabase client not available)")
+# Import Supabase client
+from supabase_client import (
+    sign_up, sign_in, sign_out, get_current_user, 
+    save_daily_metrics, get_daily_metrics, get_metrics_range,
+    save_whoop_token, get_whoop_token
+)
+
+# We're using Supabase exclusively now
+USE_SUPABASE = True
 
 load_dotenv()
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))  # For flash messages and sessions
@@ -49,29 +55,40 @@ def login_required(f):
 
 def is_authenticated():
     """Check if the user is authenticated"""
-    if USE_SUPABASE:
-        # Check Supabase session
-        try:
-            current_user = get_current_user()
-            return current_user is not None
-        except:
-            return False
-    else:
-        # Check Flask session
-        return 'user_id' in flask_session
+    # Check Supabase session
+    try:
+        current_user = get_current_user()
+        return current_user is not None
+    except Exception as e:
+        logger.error(f"Error checking authentication: {str(e)}")
+        return False
 
 def get_user_id():
     """Get the current user ID"""
-    if USE_SUPABASE:
-        try:
-            current_user = get_current_user()
-            if current_user:
-                return current_user.id
-            return None
-        except:
-            return None
-    else:
-        return flask_session.get('user_id', "default")
+    # First check Flask session in any case
+    user_id = flask_session.get('user_id')
+    if user_id:
+        logger.debug(f"Found user_id in Flask session: {user_id}")
+        return user_id
+        
+    # Try to get from Supabase auth
+    try:
+        current_user = get_current_user()
+        if current_user and current_user.user:
+            logger.debug(f"Found user from Supabase auth: {current_user.user.id}")
+            return current_user.user.id
+    except Exception as e:
+        logger.error(f"Error getting user from Supabase: {str(e)}")
+            
+    # Fall back to admin user
+    admin_id = os.getenv("SUPABASE_USER_ID")
+    if admin_id:
+        logger.debug(f"Using admin ID from env: {admin_id}")
+        return admin_id
+            
+    # Last resort - this should not happen in production
+    logger.warning("No user ID found, using default")
+    return "default"
 
 # Scheduler to fetch data daily
 scheduler = BackgroundScheduler()
@@ -82,33 +99,25 @@ def fetch_and_store_whoop_data():
     """
     today_str = datetime.today().strftime("%Y-%m-%d")
     
-    # In a multi-user environment, this would need to iterate through all users
-    if USE_SUPABASE:
-        # For demo purposes, use admin user from env
-        user_id = os.getenv("SUPABASE_USER_ID")
-        if not user_id:
-            print("No admin user ID set, cannot fetch data")
-            return
-        
+    # For demo purposes, use admin user from env
+    # In a production multi-user environment, this would need to iterate through all users
+    user_id = os.getenv("SUPABASE_USER_ID")
+    if not user_id:
+        logger.error("No admin user ID set, cannot fetch data")
+        return
+    
+    try:
         # Get metrics using Whoop API
-        metrics = get_all_daily_metrics(today_str, "default")  # Username doesn't matter here
+        metrics = get_all_daily_metrics(today_str, user_id)
         
-        if metrics:
+        if metrics and any(v is not None for k, v in metrics.items() if k != 'date'):
             # Store in Supabase
             save_daily_metrics(user_id, metrics)
-            print(f"Successfully updated metrics for {today_str} in Supabase")
+            logger.info(f"Successfully updated metrics for {today_str}")
         else:
-            print(f"Failed to fetch metrics for {today_str}")
-    else:
-        # Use SQLite storage
-        username = "default"
-        metrics = get_all_daily_metrics(today_str, username)
-        
-        if metrics:
-            add_or_update_daily_metrics(metrics)
-            print(f"Successfully updated metrics for {today_str} in SQLite")
-        else:
-            print(f"Failed to fetch metrics for {today_str}")
+            logger.warning(f"No metrics data available for {today_str}")
+    except Exception as e:
+        logger.error(f"Error fetching/storing Whoop data: {str(e)}")
 
 # Schedule job to run daily at midnight
 scheduler.add_job(func=fetch_and_store_whoop_data, trigger="cron", hour=0, minute=5)
@@ -124,42 +133,30 @@ def signup():
         
         if not email or not password:
             flash("Please provide both email and password")
-            return render_template('signup.html')
+            return render_template('signup.html', now=datetime.now())
         
-        if USE_SUPABASE:
-            try:
-                response = sign_up(email, password)
-                
-                # Check if email confirmation is required
-                if response.user.confirmation_sent_at:
-                    flash("Please check your email to confirm your account")
-                else:
-                    # Store user in session
-                    flask_session['user_id'] = response.user.id
-                    flask_session['user_email'] = email
-                    flash("Account created successfully")
-                    
-                    # Redirect to original destination if available
-                    next_url = flask_session.pop('next_url', None)
-                    if next_url:
-                        return redirect(next_url)
-                    return redirect(url_for('dashboard'))
-            except Exception as e:
-                flash(f"Error creating account: {str(e)}")
-        else:
-            # For SQLite, just generate a user ID and store in session
-            user_id = str(uuid.uuid4())
-            flask_session['user_id'] = user_id
-            flask_session['user_email'] = email
-            flash("Account created successfully")
+        try:
+            response = sign_up(email, password)
             
-            # Redirect to original destination if available
-            next_url = flask_session.pop('next_url', None)
-            if next_url:
-                return redirect(next_url)
-            return redirect(url_for('dashboard'))
+            # Check if email confirmation is required
+            if response.user.confirmation_sent_at:
+                flash("Please check your email to confirm your account")
+            else:
+                # Store user in session
+                flask_session['user_id'] = response.user.id
+                flask_session['user_email'] = email
+                flash("Account created successfully")
+                
+                # Redirect to original destination if available
+                next_url = flask_session.pop('next_url', None)
+                if next_url:
+                    return redirect(next_url)
+                return redirect(url_for('dashboard'))
+        except Exception as e:
+            logger.error(f"Error creating account: {str(e)}")
+            flash(f"Error creating account: {str(e)}")
     
-    return render_template('signup.html')
+    return render_template('signup.html', now=datetime.now())
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -170,29 +167,13 @@ def login():
         
         if not email or not password:
             flash("Please provide both email and password")
-            return render_template('login.html')
+            return render_template('login.html', now=datetime.now())
         
-        if USE_SUPABASE:
-            try:
-                response = sign_in(email, password)
-                
-                # Store user in session
-                flask_session['user_id'] = response.user.id
-                flask_session['user_email'] = email
-                flash("Logged in successfully")
-                
-                # Redirect to original destination if available
-                next_url = flask_session.pop('next_url', None)
-                if next_url:
-                    return redirect(next_url)
-                return redirect(url_for('dashboard'))
-            except Exception as e:
-                flash(f"Error logging in: {str(e)}")
-        else:
-            # For SQLite, just generate a user ID and store in session
-            # In production, you would validate credentials
-            user_id = "default"
-            flask_session['user_id'] = user_id
+        try:
+            response = sign_in(email, password)
+            
+            # Store user in session
+            flask_session['user_id'] = response.user.id
             flask_session['user_email'] = email
             flash("Logged in successfully")
             
@@ -201,14 +182,21 @@ def login():
             if next_url:
                 return redirect(next_url)
             return redirect(url_for('dashboard'))
+        except Exception as e:
+            logger.error(f"Error logging in: {str(e)}")
+            flash(f"Error logging in: {str(e)}")
+            
+            return render_template('login.html', now=datetime.now())
     
-    return render_template('login.html')
+    return render_template('login.html', now=datetime.now())
 
 @app.route('/logout')
 def logout():
     """Log out the current user"""
-    if USE_SUPABASE:
+    try:
         sign_out(flask_session)
+    except Exception as e:
+        logger.error(f"Error signing out from Supabase: {str(e)}")
     
     # Clear Flask session
     flask_session.clear()
@@ -225,25 +213,59 @@ def dashboard(selected_date=None):
     try:
         user_id = get_user_id()
         
-        # Load latest 30 days of data
-        if USE_SUPABASE:
-            # Get data from Supabase
+        # Load latest 30 days of data from Supabase
+        try:
             records_data = get_daily_metrics(user_id)
-            records = records_data[:30] if records_data else []  # Limit to 30 records
-        else:
-            # Get data from SQLite
-            records = session.query(DailyMetrics).order_by(DailyMetrics.date.desc()).limit(30).all()
+            
+            # Sort by date (most recent first)
+            records = sorted(
+                records_data[:30] if records_data else [], 
+                key=lambda x: x.get('date', ''), 
+                reverse=True
+            )
+        except Exception as e:
+            logger.error(f"Error fetching records: {str(e)}")
+            records = []
         
         # Calculate correlation if enough data points
-        corr, p_value = compute_correlation()
+        all_records = records_data if 'records_data' in locals() else []
+        logger.info(f"Retrieved {len(all_records)} records from database")
+        if len(all_records) > 0:
+            logger.info(f"Sample record: {all_records[0]}")
         corr_text = None
-        if corr is not None:
-            significance = "significant" if p_value < 0.05 else "not significant"
-            corr_text = f"Correlation between recovery and mood: {corr:.2f} (p-value: {p_value:.3f}, {significance})"
         
-        # Generate visualizations
-        time_series = generate_time_series_plot()
-        correlation_plot = generate_correlation_plot()
+        try:
+            # Create temporary data frame from records for correlation
+            data_for_corr = [
+                {"recovery_score": r.get("recovery_score"), "mood_rating": r.get("mood_rating")}
+                for r in all_records
+                if r.get("recovery_score") is not None and r.get("mood_rating") is not None
+            ]
+            
+            if len(data_for_corr) > 1:
+                import pandas as pd
+                from scipy.stats import pearsonr
+                
+                df = pd.DataFrame(data_for_corr)
+                corr, p_value = pearsonr(df["recovery_score"], df["mood_rating"])
+                significance = "significant" if p_value < 0.05 else "not significant"
+                corr_text = f"Correlation between recovery and mood: {corr:.2f} (p-value: {p_value:.3f}, {significance})"
+        except Exception as e:
+            logger.error(f"Error calculating correlation: {str(e)}")
+        
+        # Generate visualizations with Supabase data
+        try:
+            # Pass all records to visualization functions
+            logger.info(f"Generating visualizations with {len(all_records)} records")
+            time_series = generate_time_series_plot(db_records=all_records)
+            correlation_plot = generate_correlation_plot(db_records=all_records)
+            logger.info(f"Visualization generation successful: time_series={time_series is not None}, correlation_plot={correlation_plot is not None}")
+        except Exception as e:
+            logger.error(f"Error generating visualizations: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            time_series = None
+            correlation_plot = None
         
         # Determine the date to display
         if selected_date:
@@ -258,53 +280,73 @@ def dashboard(selected_date=None):
             display_date = date.today()
         
         # Get record for the selected date
-        if USE_SUPABASE:
-            # Get from Supabase
-            date_str = display_date.strftime("%Y-%m-%d")
-            selected_records = get_daily_metrics(user_id, date_str)
-            selected_record = selected_records[0] if selected_records else None
-            
-            # Convert Supabase record for template compatibility
-            if selected_record:
-                # Create a compatible object with the same attributes as SQLite model
-                class SupabaseRecord:
-                    def __init__(self, data):
-                        for key, value in data.items():
-                            setattr(self, key, value)
-                
-                selected_record = SupabaseRecord(selected_record)
-        else:
-            # Get from SQLite
-            selected_record = session.query(DailyMetrics).filter_by(date=display_date).first()
-        
-        # Use the already calculated burnout risk if available, otherwise calculate it
+        selected_record = None
         burnout_risk = None
-        if selected_record:
-            if hasattr(selected_record, 'burnout_current') and selected_record.burnout_current is not None:
-                burnout_risk = selected_record.burnout_current
-            else:
-                burnout_risk = get_burnout_risk_score(selected_record)
+        
+        try:
+            # Get from Supabase as dictionary
+            date_str = display_date.strftime("%Y-%m-%d") if isinstance(display_date, date) else display_date
+            selected_records = get_daily_metrics(user_id, date_str)
+            if selected_records and len(selected_records) > 0:
+                selected_record = selected_records[0]  # Keep as dictionary
+                # Get burnout risk from the record
+                burnout_risk = selected_record.get('burnout_current')
+                
+                # If burnout risk is not available, calculate it
+                if burnout_risk is None and selected_record.get('recovery_score') is not None:
+                    # Get historical data for accurate burnout calculation
+                    burnout_risk = get_burnout_risk_score(selected_record, all_records)
+                    
+                    # Update record with calculated burnout risk
+                    selected_record['burnout_current'] = burnout_risk
+                    save_daily_metrics(user_id, selected_record)
+        except Exception as e:
+            logger.error(f"Error getting selected record: {str(e)}")
             
         # Calculate next and previous dates
-        next_date = (display_date + timedelta(days=1)).strftime("%Y-%m-%d")
-        prev_date = (display_date - timedelta(days=1)).strftime("%Y-%m-%d")
+        if isinstance(display_date, date):
+            next_date = (display_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            prev_date = (display_date - timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            # Handle string date
+            try:
+                date_obj = datetime.strptime(display_date, "%Y-%m-%d").date()
+                next_date = (date_obj + timedelta(days=1)).strftime("%Y-%m-%d")
+                prev_date = (date_obj - timedelta(days=1)).strftime("%Y-%m-%d")
+            except (ValueError, TypeError):
+                # Fallback to today if we can't parse the date
+                today = date.today()
+                next_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+                prev_date = (today - timedelta(days=1)).strftime("%Y-%m-%d")
         
         # Make previous day always available and next day available up to today
-        has_next = display_date < date.today()
+        if isinstance(display_date, date):
+            has_next = display_date < date.today()
+        else:
+            # For string dates, compare with today's string
+            today_str = date.today().strftime("%Y-%m-%d")
+            has_next = display_date < today_str
+            
         has_prev = True  # Always allow going back to previous days
         
         # Check if authenticated with Whoop
-        if USE_SUPABASE:
-            # Get from Supabase
+        try:
             token_info = get_whoop_token(user_id)
-            whoop_authenticated = token_info.get("is_valid", False)
-        else:
-            # Get from SQLite
-            username = user_id if isinstance(user_id, str) else "default"
-            whoop_authenticated = get_valid_access_token(username) is not None
+            # Consider authenticated if we have any token data, even if expired
+            # This ensures "connected" status shows even if token needs refresh
+            whoop_authenticated = token_info.get("access_token") is not None
+            logger.debug(f"Token info retrieved for user: {user_id}")
+        except Exception as e:
+            logger.error(f"Error checking Whoop token: {str(e)}")
+            whoop_authenticated = False
+            
+        logger.info(f"Authentication status: {whoop_authenticated}")
+        logger.info(f"Preparing dashboard for date: {display_date}")
         
-        # Debugging
-        print(f"Rendering dashboard for {display_date}, authenticated: {whoop_authenticated}")
+        # Log key template variables
+        logger.info(f"Rendering dashboard with time_series={time_series is not None}")
+        logger.info(f"Rendering dashboard with correlation_plot={correlation_plot is not None}")
+        logger.info(f"Rendering dashboard with correlation_text={corr_text is not None}")
         
         return render_template(
             'dashboard.html',
@@ -413,8 +455,53 @@ def input_mood(input_date=None):
             # Create a compatible object with the same attributes as SQLite model
             class SupabaseRecord:
                 def __init__(self, data):
+                    # Set default attributes to None
+                    # Recovery metrics
+                    self.recovery_score = None
+                    self.hrv = None
+                    self.resting_hr = None
+                    self.spo2_percentage = None
+                    self.skin_temp_celsius = None
+                    
+                    # Strain metrics
+                    self.strain = None
+                    self.max_hr = None
+                    self.avg_hr = None
+                    self.kilojoules = None
+                    
+                    # Sleep metrics
+                    self.sleep_quality = None
+                    self.sleep_consistency = None
+                    self.sleep_efficiency = None
+                    self.total_sleep_time = None
+                    self.deep_sleep_time = None
+                    self.rem_sleep_time = None
+                    self.respiratory_rate = None
+                    
+                    # Workout metrics
+                    self.workout_count = None
+                    self.workout_strain = None
+                    
+                    # Subjective metrics
+                    self.mood_rating = None
+                    self.energy_level = None
+                    self.stress_level = None
+                    self.notes = None
+                    
+                    # Derived metrics
+                    self.burnout_current = None
+                    self.burnout_trend = None
+                    
+                    # Set actual data
                     for key, value in data.items():
-                        setattr(self, key, value)
+                        # Convert date string to date object if needed
+                        if key == 'date' and isinstance(value, str):
+                            try:
+                                setattr(self, key, datetime.strptime(value, "%Y-%m-%d").date())
+                            except ValueError:
+                                setattr(self, key, value)
+                        else:
+                            setattr(self, key, value)
             
             record = SupabaseRecord(record)
     else:
@@ -430,6 +517,7 @@ def manual_fetch_data():
     Manually fetch Whoop data for a specific date or date range.
     """
     date_str = request.form.get("date")
+    user_id = get_user_id()
     
     if not date_str:
         date_str = date.today().strftime("%Y-%m-%d")
@@ -438,24 +526,29 @@ def manual_fetch_data():
         # Convert to date object to validate format
         date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
         
-        # Fetch data using database token
-        username = "default"  # You can use a real username if you have user accounts
-        print(f"Fetching Whoop data for {date_str}...")
-        metrics = get_all_daily_metrics(date_str, username)
-        print(f"Retrieved metrics: {metrics}")
+        # Fetch data using the user's Whoop token
+        logger.info(f"Fetching Whoop data for user {user_id} on {date_str}")
+        metrics = get_all_daily_metrics(date_str, user_id)
         
         if metrics and any(v is not None for k, v in metrics.items() if k != 'date'):
-            # Store in database
-            record = add_or_update_daily_metrics(metrics)
+            # Store in Supabase
+            save_daily_metrics(user_id, metrics)
             flash(f"Successfully fetched Whoop data for {date_str}")
+            logger.info(f"Successfully stored metrics for {date_str}")
         else:
             flash(f"No Whoop data available for {date_str}")
+            logger.warning(f"No data available for {date_str}")
         
         # Redirect back to the same date's dashboard
         return redirect(url_for('dashboard', selected_date=date_str))
         
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Invalid date format: {str(e)}")
         flash("Please enter a valid date in YYYY-MM-DD format.")
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        logger.error(f"Error fetching data: {str(e)}")
+        flash(f"Error fetching data: {str(e)}")
         return redirect(url_for('dashboard'))
 
 @app.route('/data')
@@ -464,21 +557,22 @@ def get_data():
     """
     API endpoint to get all metrics as JSON.
     """
-    records = session.query(DailyMetrics).order_by(DailyMetrics.date).all()
+    user_id = get_user_id()
     
-    data = [{
-        "date": record.date.strftime("%Y-%m-%d"),
-        "recovery_score": record.recovery_score,
-        "strain": record.strain,
-        "hrv": record.hrv,
-        "resting_hr": record.resting_hr,
-        "sleep_quality": record.sleep_quality,
-        "mood_rating": record.mood_rating,
-        "notes": record.notes,
-        "burnout_risk": record.burnout_current if record.burnout_current is not None else get_burnout_risk_score(record)
-    } for record in records]
-    
-    return jsonify(data)
+    try:
+        # Get all metrics from Supabase
+        records = get_daily_metrics(user_id)
+        
+        # Convert dates to strings for JSON serialization
+        for r in records:
+            if isinstance(r.get('date'), date):
+                r['date'] = r['date'].strftime("%Y-%m-%d")
+        
+        # Return as JSON
+        return jsonify(records)
+    except Exception as e:
+        logger.error(f"Error getting data: {str(e)}")
+        return jsonify({"error": str(e)})
 
 @app.route('/calendar_data/<string:year>/<string:month>')
 @login_required
@@ -487,6 +581,8 @@ def calendar_data(year, month):
     API endpoint to get calendar data for a specific month.
     Returns dates with burnout risk data for calendar visualization.
     """
+    user_id = get_user_id()
+    
     try:
         # Convert to integers
         year = int(year)
@@ -501,38 +597,42 @@ def calendar_data(year, month):
         else:
             end_date = date(year, month + 1, 1)
             
-        # Query all records for the month
-        records = session.query(DailyMetrics).filter(
-            DailyMetrics.date >= start_date,
-            DailyMetrics.date < end_date
-        ).all()
+        # Format dates for Supabase query
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
         
-        # Process burnout risk for all records first
-        for r in records:
-            if r.burnout_current is None and r.recovery_score is not None:
-                get_burnout_risk_score(r)
+        # Get metrics for date range
+        records = get_metrics_range(user_id, start_str, end_str)
         
         # Create calendar data
         calendar_data = []
         for r in records:
+            # Determine risk level
             risk_level = None
-            if r.burnout_current is not None:
-                if r.burnout_current < 33:
+            burnout_risk = r.get('burnout_current')
+            
+            if burnout_risk is not None:
+                if burnout_risk < 33:
                     risk_level = "low"
-                elif r.burnout_current < 66:
+                elif burnout_risk < 66:
                     risk_level = "medium"
                 else:
                     risk_level = "high"
             
+            # Ensure date is in string format
+            date_str = r.get('date')
+            if isinstance(date_str, date):
+                date_str = date_str.strftime("%Y-%m-%d")
+            
             # Compile data for this date
             day_data = {
-                "date": r.date.strftime("%Y-%m-%d"),
+                "date": date_str,
                 "has_data": True,
                 "risk_level": risk_level,
-                "recovery_score": r.recovery_score,
-                "mood_rating": r.mood_rating,
-                "strain": r.strain,
-                "burnout_risk": r.burnout_current
+                "recovery_score": r.get('recovery_score'),
+                "mood_rating": r.get('mood_rating'),
+                "strain": r.get('strain'),
+                "burnout_risk": burnout_risk
             }
             
             calendar_data.append(day_data)
@@ -541,6 +641,7 @@ def calendar_data(year, month):
         return jsonify(calendar_data)
         
     except Exception as e:
+        logger.error(f"Error getting calendar data: {str(e)}")
         return jsonify({"error": str(e)})
 
 @app.route('/auth')
@@ -589,13 +690,22 @@ def index():
                 # Store the token based on storage system
                 if USE_SUPABASE:
                     user_id = get_user_id()
-                    if user_id:
+                    print(f"Saving Whoop token to Supabase for user: {user_id}")
+                    if user_id is not None:
                         save_whoop_token(user_id, token)
+                    else:
+                        # Fall back to admin user if current user not found
+                        admin_id = os.getenv("SUPABASE_USER_ID")
+                        print(f"User ID not found, using admin ID: {admin_id}")
+                        if admin_id:
+                            save_whoop_token(admin_id, token)
+                        else:
+                            flash("Error: Could not save Whoop token, no valid user ID found")
                 else:
                     username = get_user_id() or "default"
                     save_token_to_env(token, username)
                     
-                flash("Successfully authenticated with Whoop!")
+                flash("Successfully connected to Whoop!")
             else:
                 error_msg = f"Error acquiring token: {response.text}"
                 print(error_msg)
@@ -630,6 +740,7 @@ def callback():
     """
     # Process OAuth callback directly here to avoid extra redirects
     code = request.args.get('code')
+    user_id = get_user_id()
     
     if code:
         try:
@@ -650,10 +761,26 @@ def callback():
             
             if response.status_code == 200:
                 token = response.json()
-                # Store the token in the database
-                username = "default"  # You can use a real username if you have user accounts
-                save_token_to_env(token, username)
-                flash("Successfully authenticated with Whoop!")
+                # Store the token based on storage system
+                if USE_SUPABASE:
+                    # Store in Supabase
+                    print(f"Saving Whoop token to Supabase for user: {user_id}")
+                    if user_id is not None:
+                        save_whoop_token(user_id, token)
+                    else:
+                        # Fall back to admin user if current user not found
+                        admin_id = os.getenv("SUPABASE_USER_ID")
+                        print(f"User ID not found, using admin ID: {admin_id}")
+                        if admin_id:
+                            save_whoop_token(admin_id, token)
+                        else:
+                            flash("Error: Could not save Whoop token, no valid user ID found")
+                else:
+                    # Store in SQLite
+                    username = user_id if isinstance(user_id, str) else "default"
+                    save_token_to_env(token, username)
+                
+                flash("Successfully connected to Whoop!")
             else:
                 error_msg = f"Error acquiring token: {response.text}"
                 print(error_msg)
@@ -754,6 +881,112 @@ def test_whoop_api():
     html += f"<p><a href='{url_for('auth')}' class='btn btn-primary'>Re-authenticate with Whoop</a></p>"
     
     return html
+
+@app.route('/ai-insights', methods=['GET', 'POST'])
+@login_required
+def ai_insights():
+    """
+    Get AI-powered insights about the user's burnout risk and metrics.
+    Accepts optional query for specific questions about the data.
+    """
+    user_id = get_user_id()
+    query = None
+    
+    if request.method == 'POST':
+        # Get user query if provided
+        query = request.form.get('query')
+    
+    try:
+        # Get user data from the database (last 30 days)
+        records_data = get_daily_metrics(user_id)
+        
+        # Sort records by date for better analysis
+        records = sorted(
+            records_data if records_data else [], 
+            key=lambda x: x.get('date', ''), 
+            reverse=True
+        )
+        
+        if not records:
+            flash("No data available for AI analysis.")
+            return redirect(url_for('dashboard'))
+        
+        # Get insights
+        insights_response = get_burnout_insights(records, query)
+        
+        # Check if API call was successful
+        if insights_response.get('success'):
+            # Return insights data as JSON if it's an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify(insights_response)
+            
+            # Otherwise render the insights template
+            return render_template(
+                'ai_insights.html',
+                insights=insights_response.get('insight'),
+                records=records[:7],  # Show last 7 days of data
+                query=query,
+                now=datetime.now()
+            )
+        else:
+            error_message = insights_response.get('error', 'Unknown error')
+            flash(f"Could not generate insights: {error_message}")
+            return redirect(url_for('dashboard'))
+            
+    except Exception as e:
+        logger.error(f"Error in AI insights route: {str(e)}")
+        flash(f"Error generating insights: {str(e)}")
+        return redirect(url_for('dashboard'))
+
+@app.route('/api/insights', methods=['POST'])
+@login_required
+def api_insights():
+    """
+    API endpoint for getting AI insights.
+    """
+    user_id = get_user_id()
+    
+    try:
+        # Get request data
+        data = request.get_json()
+        query = data.get('query') if data else None
+        
+        # Log request
+        logger.info(f"Insights API request received with query: {query}")
+        
+        # Get user data from the database (last 30 days)
+        records_data = get_daily_metrics(user_id)
+        
+        if not records_data:
+            logger.warning(f"No data available for user {user_id}")
+            return jsonify({
+                "error": "No data available for analysis",
+                "insight": "Please add some health data before requesting insights."
+            })
+        
+        logger.info(f"Retrieved {len(records_data)} records for AI analysis")
+        
+        # Get insights
+        insights_response = get_burnout_insights(records_data, query)
+        
+        # Log success or failure
+        if insights_response.get('success'):
+            logger.info(f"Successfully generated insights for user {user_id}")
+            insight_preview = insights_response.get('insight', '')[:50] + '...' if insights_response.get('insight') else ''
+            logger.debug(f"Insight preview: {insight_preview}")
+        else:
+            logger.warning(f"Failed to generate insights: {insights_response.get('error')}")
+        
+        return jsonify(insights_response)
+        
+    except Exception as e:
+        logger.error(f"Error in API insights route: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "error": "Internal server error",
+            "insight": "Something went wrong while analyzing your data. Please try again later."
+        })
 
 @app.route('/client-auth')
 @login_required
@@ -878,9 +1111,24 @@ def check_auth():
 # This login_required function is defined at the top of the file
 
 if __name__ == '__main__':
-    # Ensure the database tables exist
-    from database import Base, engine
-    Base.metadata.create_all(engine)
+    # Set Flask environment based on environment variable
+    is_production = os.getenv("FLASK_ENV") == "production"
     
-    # Run the app
-    app.run(debug=True, host='0.0.0.0', port=3000)
+    # Initialize Supabase tables if in development
+    if not is_production:
+        try:
+            from supabase_client import init_supabase_tables
+            init_supabase_tables()
+            logger.info("Supabase tables initialized")
+        except Exception as e:
+            logger.error(f"Error initializing Supabase tables: {str(e)}")
+    
+    # Run the app with appropriate settings
+    if is_production:
+        # Production settings - safer defaults
+        logger.info("Starting app in production mode")
+        app.run(debug=False, port=int(os.getenv("PORT", 3000)))
+    else:
+        # Development settings
+        logger.info("Starting app in development mode")
+        app.run(debug=True, host='127.0.0.1', port=3000)

@@ -1,0 +1,211 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">AI Insights</li>
+                </ol>
+            </nav>
+            
+            <h2 class="mb-4">
+                <i class="fas fa-brain text-primary me-2"></i> AI Burnout Insights
+            </h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Insights Display Panel -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i> 
+                        Personal Insights
+                    </h5>
+                    <span class="badge bg-primary">AI-Powered</span>
+                </div>
+                <div class="card-body">
+                    <div id="insights-content" class="markdown-content">
+                        {% if insights %}
+                        {{ insights|safe }}
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mb-0">Analyzing your data...</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">AI analysis based on your recent health metrics and mood patterns.</small>
+                </div>
+            </div>
+            
+            <!-- Query Form -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle text-info me-2"></i>
+                        Ask About Your Data
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="query-form" action="{{ url_for('ai_insights') }}" method="post">
+                        <div class="mb-3">
+                            <label for="query" class="form-label">Your Question</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="query" name="query" 
+                                       placeholder="e.g., Why is my burnout risk increasing?" 
+                                       value="{{ query }}">
+                                <button class="btn btn-primary" type="submit" id="submit-query">
+                                    <i class="fas fa-paper-plane me-1"></i> Ask
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Ask specific questions about your burnout risk, metrics, or recommendations.
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <h6 class="mb-3">Example Questions:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-sm btn-outline-secondary example-query" 
+                                    data-query="What's causing my high burnout risk?">
+                                What's causing my high burnout risk?
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary example-query" 
+                                    data-query="How can I improve my recovery score?">
+                                How can I improve my recovery score?
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary example-query" 
+                                    data-query="What patterns do you see in my mood ratings?">
+                                What patterns do you see in my mood?
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary example-query" 
+                                    data-query="How is my sleep affecting my burnout risk?">
+                                How is my sleep affecting my burnout?
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Data Summary Panel -->
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar text-success me-2"></i>
+                        Recent Data Summary
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for record in records %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h6 class="mb-1">
+                                    {% if record.date is string %}
+                                        {{ record.date }}
+                                    {% else %}
+                                        {{ record.date.strftime('%b %d, %Y') }}
+                                    {% endif %}
+                                </h6>
+                                
+                                {% set burnout = record.get('burnout_current') %}
+                                {% if burnout is not none %}
+                                    {% if burnout < 33 %}
+                                    <span class="badge bg-success">{{ burnout|round(1) }}%</span>
+                                    {% elif burnout < 66 %}
+                                    <span class="badge bg-warning text-dark">{{ burnout|round(1) }}%</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ burnout|round(1) }}%</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-heartbeat text-danger"></i> 
+                                    {{ record.get('recovery_score')|round(1) if record.get('recovery_score') is not none else "—" }}
+                                </span>
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-bolt text-warning"></i> 
+                                    {{ record.get('strain')|round(1) if record.get('strain') is not none else "—" }}
+                                </span>
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-smile text-primary"></i> 
+                                    {{ record.get('mood_rating') if record.get('mood_rating') is not none else "—" }}
+                                </span>
+                            </div>
+                            {% if record.get('notes') %}
+                            <div class="mt-1 small text-muted">
+                                <i class="fas fa-comment-alt me-1"></i> {{ record.get('notes') }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <!-- How It Works Panel -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        How It Works
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">The AI Insights feature analyzes your data to provide personalized burnout prevention recommendations:</p>
+                    <ul class="small">
+                        <li>Identifies patterns across recovery, mood, and strain</li>
+                        <li>Analyzes your sleep quality and HRV trends</li>
+                        <li>Provides specific, actionable recommendations</li>
+                        <li>Answers questions about your personal health data</li>
+                    </ul>
+                    <p class="small mb-0">All insights are generated using advanced AI, analyzing only your personal metrics.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Convert markdown content to HTML
+        const insightsContent = document.getElementById('insights-content');
+        if (insightsContent) {
+            const markdownContent = insightsContent.innerHTML.trim();
+            if (markdownContent && !markdownContent.includes('spinner-border')) {
+                insightsContent.innerHTML = marked.parse(markdownContent);
+            }
+        }
+        
+        // Handle example queries
+        document.querySelectorAll('.example-query').forEach(button => {
+            button.addEventListener('click', function() {
+                const query = this.getAttribute('data-query');
+                document.getElementById('query').value = query;
+                document.getElementById('query-form').submit();
+            });
+        });
+    });
+</script>
+{% endblock %}

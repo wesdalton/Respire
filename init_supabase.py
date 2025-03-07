@@ -5,7 +5,10 @@ This script should be run once when setting up Supabase integration.
 
 import os
 from dotenv import load_dotenv
-from supabase_client import init_supabase_tables, sign_up, save_whoop_token, save_daily_metrics
+from supabase_client import (
+    init_supabase_tables, sign_up, save_whoop_token, 
+    save_daily_metrics, get_service_client
+)
 from database import session, User, DailyMetrics, get_user_token
 import uuid
 
@@ -124,23 +127,54 @@ def main():
     print("Initializing Supabase for Burnout Predictor")
     print("===========================================")
     
-    # Initialize Supabase tables
-    print("\nCreating database tables...")
-    success = init_supabase_tables()
-    
-    if not success:
-        print("Failed to initialize Supabase tables. Check your Supabase credentials and permissions.")
+    # Test connection to Supabase
+    print("\nTesting connection to Supabase...")
+    try:
+        import os
+        print(f"Supabase URL: {os.getenv('SUPABASE_URL')}")
+        client = get_service_client()
+        print("Connection successful!")
+    except Exception as e:
+        print(f"Error connecting to Supabase: {str(e)}")
+        print("Please check your Supabase credentials in the .env file.")
         return
-        
-    print("Database tables created successfully.")
     
-    # Create admin user
+    # Try to directly create admin user first
     print("\nCreating admin user...")
     admin_user = create_admin_user()
     
     if not admin_user:
-        print("Could not create or identify admin user. Migration will be skipped.")
-        return
+        print("Could not create admin user. Checking if tables need to be created...")
+        
+        # Initialize Supabase tables
+        print("\nCreating database tables...")
+        try:
+            success = init_supabase_tables()
+            
+            if not success:
+                print("Failed to initialize Supabase tables. Check your Supabase credentials and permissions.")
+                return
+                
+            print("Database tables created successfully.")
+            
+            # Try creating admin user again
+            print("\nTrying to create admin user again...")
+            admin_user = create_admin_user()
+            
+            if not admin_user:
+                print("Still could not create admin user. Check the Supabase Auth settings.")
+                return
+        except Exception as e:
+            print(f"Error during table creation: {str(e)}")
+            return
+    else:
+        print("Admin user created or already exists!")
+    
+    # Display admin user details
+    print(f"\nAdmin User ID: {admin_user.id}")
+    print(f"Admin Email: {admin_user.email}")
+    print("\nIMPORTANT: Add this to your .env file:")
+    print(f"SUPABASE_USER_ID={admin_user.id}")
         
     # Migrate data from SQLite
     print("\nMigrating data from SQLite database...")
@@ -152,8 +186,10 @@ def main():
     migrate_daily_metrics(admin_user.id)
     
     print("\nMigration completed!")
+    
+    print("\nSetup completed!")
     print("You can now use the Supabase backend for authentication and data storage.")
-    print("Set up your .env file with the Supabase credentials to continue.")
+    print(f"Make sure SUPABASE_USER_ID={admin_user.id} is in your .env file.")
 
 if __name__ == "__main__":
     main()

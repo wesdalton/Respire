@@ -31,7 +31,13 @@
                     </button>
                     {% endif %}
                     
-                    <strong class="mx-3">{{ selected_date.strftime('%A, %B %d, %Y') }}</strong>
+                    <strong class="mx-3">
+                        {% if selected_date is string %}
+                            {{ selected_date }}
+                        {% else %}
+                            {{ selected_date.strftime('%A, %B %d, %Y') }}
+                        {% endif %}
+                    </strong>
                     
                     {% if has_next %}
                     <a href="{{ url_for('dashboard', selected_date=next_date) }}" class="btn btn-sm btn-outline-primary">
@@ -44,9 +50,20 @@
                     {% endif %}
                 </div>
                 <div class="date-picker-wrapper">
-                    <button id="date-picker-toggle" class="btn btn-sm btn-primary" type="button">
-                        <i class="fas fa-calendar-alt"></i> <span id="current-date-display">{{ selected_date.strftime('%b %d, %Y') }}</span>
-                    </button>
+                    <div class="d-inline-flex align-items-center">
+                        <button id="date-picker-toggle" class="btn btn-sm btn-primary" type="button">
+                            <i class="fas fa-calendar-alt"></i> <span id="current-date-display">
+                                {% if selected_date is string %}
+                                    {{ selected_date }}
+                                {% else %}
+                                    {{ selected_date.strftime('%b %d, %Y') }}
+                                {% endif %}
+                            </span>
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                            <i class="fas fa-calendar-day"></i> Today
+                        </a>
+                    </div>
                     <div id="custom-calendar" class="custom-calendar-popup">
                         <div class="calendar-header">
                             <button id="prev-month" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
@@ -76,17 +93,44 @@
                     <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                         <div class="metric-card">
                             <h6>Recovery Score</h6>
-                            <div class="metric-value {% if selected_record.recovery_score is not none and selected_record.recovery_score > 66 %}text-success{% elif selected_record.recovery_score is not none and selected_record.recovery_score > 33 %}text-warning{% elif selected_record.recovery_score is not none %}text-danger{% else %}text-muted{% endif %}">
-                                {{ selected_record.recovery_score|round(1) if selected_record.recovery_score is not none else "N/A" }}
+                            <div class="metric-value 
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 66 %}text-success
+                                    {% elif selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 33 %}text-warning
+                                    {% elif selected_record.get('recovery_score') is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% else %}
+                                    {% if selected_record.recovery_score is not none and selected_record.recovery_score > 66 %}text-success
+                                    {% elif selected_record.recovery_score is not none and selected_record.recovery_score > 33 %}text-warning
+                                    {% elif selected_record.recovery_score is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% endif %}">
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('recovery_score')|round(1) if selected_record.get('recovery_score') is not none else "N/A" }}
+                                {% else %}
+                                    {{ selected_record.recovery_score|round(1) if selected_record.recovery_score is not none else "N/A" }}
+                                {% endif %}
                             </div>
                             <div class="metric-badge">
-                                {% if selected_record.recovery_score is not none %}
-                                    {% if selected_record.recovery_score > 66 %}
-                                    <span class="badge bg-success">Green</span>
-                                    {% elif selected_record.recovery_score > 33 %}
-                                    <span class="badge bg-warning text-dark">Yellow</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">Red</span>
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('recovery_score') is not none %}
+                                        {% if selected_record.get('recovery_score') > 66 %}
+                                        <span class="badge bg-success">Green</span>
+                                        {% elif selected_record.get('recovery_score') > 33 %}
+                                        <span class="badge bg-warning text-dark">Yellow</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Red</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    {% if selected_record.recovery_score is not none %}
+                                        {% if selected_record.recovery_score > 66 %}
+                                        <span class="badge bg-success">Green</span>
+                                        {% elif selected_record.recovery_score > 33 %}
+                                        <span class="badge bg-warning text-dark">Yellow</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Red</span>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -95,18 +139,45 @@
                     <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                         <div class="metric-card">
                             <h6>Mood Rating</h6>
-                            <div class="metric-value {% if selected_record.mood_rating is not none and selected_record.mood_rating > 6 %}text-success{% elif selected_record.mood_rating is not none and selected_record.mood_rating > 3 %}text-warning{% elif selected_record.mood_rating is not none %}text-danger{% else %}text-muted{% endif %}">
-                                {{ selected_record.mood_rating if selected_record.mood_rating is not none else "N/A" }}
+                            <div class="metric-value 
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 6 %}text-success
+                                    {% elif selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 3 %}text-warning
+                                    {% elif selected_record.get('mood_rating') is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% else %}
+                                    {% if selected_record.mood_rating is not none and selected_record.mood_rating > 6 %}text-success
+                                    {% elif selected_record.mood_rating is not none and selected_record.mood_rating > 3 %}text-warning
+                                    {% elif selected_record.mood_rating is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% endif %}">
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('mood_rating') if selected_record.get('mood_rating') is not none else "N/A" }}
+                                {% else %}
+                                    {{ selected_record.mood_rating if selected_record.mood_rating is not none else "N/A" }}
+                                {% endif %}
                                 <span class="fs-6 text-muted">/10</span>
                             </div>
                             <div class="metric-badge">
-                                {% if selected_record.mood_rating is not none %}
-                                    {% if selected_record.mood_rating > 6 %}
-                                    <span class="badge bg-success">Good</span>
-                                    {% elif selected_record.mood_rating > 3 %}
-                                    <span class="badge bg-warning text-dark">Neutral</span>
-                                    {% else %}
-                                    <span class="badge bg-danger">Poor</span>
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('mood_rating') is not none %}
+                                        {% if selected_record.get('mood_rating') > 6 %}
+                                        <span class="badge bg-success">Good</span>
+                                        {% elif selected_record.get('mood_rating') > 3 %}
+                                        <span class="badge bg-warning text-dark">Neutral</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Poor</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    {% if selected_record.mood_rating is not none %}
+                                        {% if selected_record.mood_rating > 6 %}
+                                        <span class="badge bg-success">Good</span>
+                                        {% elif selected_record.mood_rating > 3 %}
+                                        <span class="badge bg-warning text-dark">Neutral</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Poor</span>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -115,20 +186,49 @@
                     <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                         <div class="metric-card">
                             <h6>Daily Strain</h6>
-                            <div class="metric-value {% if selected_record.strain is not none and selected_record.strain < 9 %}text-success{% elif selected_record.strain is not none and selected_record.strain < 14 %}text-warning{% elif selected_record.strain is not none %}text-danger{% else %}text-muted{% endif %}">
-                                {{ selected_record.strain|round(1) if selected_record.strain is not none else "N/A" }}
+                            <div class="metric-value 
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('strain') is not none and selected_record.get('strain') < 9 %}text-success
+                                    {% elif selected_record.get('strain') is not none and selected_record.get('strain') < 14 %}text-warning
+                                    {% elif selected_record.get('strain') is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% else %}
+                                    {% if selected_record.strain is not none and selected_record.strain < 9 %}text-success
+                                    {% elif selected_record.strain is not none and selected_record.strain < 14 %}text-warning
+                                    {% elif selected_record.strain is not none %}text-danger
+                                    {% else %}text-muted{% endif %}
+                                {% endif %}">
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('strain')|round(1) if selected_record.get('strain') is not none else "N/A" }}
+                                {% else %}
+                                    {{ selected_record.strain|round(1) if selected_record.strain is not none else "N/A" }}
+                                {% endif %}
                                 <span class="fs-6 text-muted">/21</span>
                             </div>
                             <div class="metric-badge">
-                                {% if selected_record.strain is not none %}
-                                    {% if selected_record.strain < 9 %}
-                                    <span class="badge bg-success">Light</span>
-                                    {% elif selected_record.strain < 14 %}
-                                    <span class="badge bg-warning text-dark">Moderate</span>
-                                    {% elif selected_record.strain < 18 %}
-                                    <span class="badge bg-danger">High</span>
-                                    {% else %}
-                                    <span class="badge bg-dark">All Out</span>
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('strain') is not none %}
+                                        {% if selected_record.get('strain') < 9 %}
+                                        <span class="badge bg-success">Light</span>
+                                        {% elif selected_record.get('strain') < 14 %}
+                                        <span class="badge bg-warning text-dark">Moderate</span>
+                                        {% elif selected_record.get('strain') < 18 %}
+                                        <span class="badge bg-danger">High</span>
+                                        {% else %}
+                                        <span class="badge bg-dark">All Out</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% else %}
+                                    {% if selected_record.strain is not none %}
+                                        {% if selected_record.strain < 9 %}
+                                        <span class="badge bg-success">Light</span>
+                                        {% elif selected_record.strain < 14 %}
+                                        <span class="badge bg-warning text-dark">Moderate</span>
+                                        {% elif selected_record.strain < 18 %}
+                                        <span class="badge bg-danger">High</span>
+                                        {% else %}
+                                        <span class="badge bg-dark">All Out</span>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </div>
@@ -151,10 +251,16 @@
                                     <span class="badge bg-danger p-2">High Risk</span>
                                     {% endif %}
                                     
-                                    {% if selected_record.burnout_trend %}
-                                        {% if selected_record.burnout_trend > 5 %}
+                                    {% if selected_record is mapping %}
+                                        {% if selected_record.get('burnout_trend') and selected_record.get('burnout_trend') > 5 %}
                                         <span class="badge bg-danger mt-1"><i class="fas fa-arrow-up"></i> Worsening</span>
-                                        {% elif selected_record.burnout_trend < -5 %}
+                                        {% elif selected_record.get('burnout_trend') and selected_record.get('burnout_trend') < -5 %}
+                                        <span class="badge bg-success mt-1"><i class="fas fa-arrow-down"></i> Improving</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if selected_record.burnout_trend and selected_record.burnout_trend > 5 %}
+                                        <span class="badge bg-danger mt-1"><i class="fas fa-arrow-up"></i> Worsening</span>
+                                        {% elif selected_record.burnout_trend and selected_record.burnout_trend < -5 %}
                                         <span class="badge bg-success mt-1"><i class="fas fa-arrow-down"></i> Improving</span>
                                         {% endif %}
                                     {% endif %}
@@ -170,8 +276,13 @@
                         <div class="small-metric-card">
                             <div class="small-metric-title">HRV</div>
                             <div class="small-metric-value">
-                                {{ selected_record.hrv|round(1) if selected_record.hrv is not none else "—" }}
-                                {% if selected_record.hrv is not none %}<span class="small-unit">ms</span>{% endif %}
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('hrv')|round(1) if selected_record.get('hrv') is not none else "—" }}
+                                    {% if selected_record.get('hrv') is not none %}<span class="small-unit">ms</span>{% endif %}
+                                {% else %}
+                                    {{ selected_record.hrv|round(1) if selected_record.hrv is not none else "—" }}
+                                    {% if selected_record.hrv is not none %}<span class="small-unit">ms</span>{% endif %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -179,8 +290,13 @@
                         <div class="small-metric-card">
                             <div class="small-metric-title">Resting HR</div>
                             <div class="small-metric-value">
-                                {{ selected_record.resting_hr|round if selected_record.resting_hr is not none else "—" }}
-                                {% if selected_record.resting_hr is not none %}<span class="small-unit">bpm</span>{% endif %}
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('resting_hr')|round if selected_record.get('resting_hr') is not none else "—" }}
+                                    {% if selected_record.get('resting_hr') is not none %}<span class="small-unit">bpm</span>{% endif %}
+                                {% else %}
+                                    {{ selected_record.resting_hr|round if selected_record.resting_hr is not none else "—" }}
+                                    {% if selected_record.resting_hr is not none %}<span class="small-unit">bpm</span>{% endif %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -188,8 +304,13 @@
                         <div class="small-metric-card">
                             <div class="small-metric-title">Sleep Quality</div>
                             <div class="small-metric-value">
-                                {{ selected_record.sleep_quality|round if selected_record.sleep_quality is not none else "—" }}
-                                {% if selected_record.sleep_quality is not none %}<span class="small-unit">%</span>{% endif %}
+                                {% if selected_record is mapping %}
+                                    {{ selected_record.get('sleep_quality')|round if selected_record.get('sleep_quality') is not none else "—" }}
+                                    {% if selected_record.get('sleep_quality') is not none %}<span class="small-unit">%</span>{% endif %}
+                                {% else %}
+                                    {{ selected_record.sleep_quality|round if selected_record.sleep_quality is not none else "—" }}
+                                    {% if selected_record.sleep_quality is not none %}<span class="small-unit">%</span>{% endif %}
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -197,10 +318,18 @@
                         <div class="small-metric-card">
                             <div class="small-metric-title">Sleep Time</div>
                             <div class="small-metric-value">
-                                {% if selected_record.total_sleep_time is not none %}
-                                    {{ (selected_record.total_sleep_time/60)|round(1) }}<span class="small-unit">hrs</span>
+                                {% if selected_record is mapping %}
+                                    {% if selected_record.get('total_sleep_time') is not none %}
+                                        {{ (selected_record.get('total_sleep_time')/60)|round(1) }}<span class="small-unit">hrs</span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
                                 {% else %}
-                                    —
+                                    {% if selected_record.total_sleep_time is not none %}
+                                        {{ (selected_record.total_sleep_time/60)|round(1) }}<span class="small-unit">hrs</span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
@@ -208,14 +337,36 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-12">
-                        {% if not selected_record.mood_rating %}
-                        <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-primary">Input Mood for {{ selected_date.strftime('%b %d') }}</a>
-                        {% elif selected_record.mood_rating %}
-                        <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-outline-primary">Update Mood</a>
+                        {% if selected_record is mapping %}
+                            {% if not selected_record.get('mood_rating') %}
+                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
+                                Input Mood for 
+                                {% if selected_date is string %}
+                                    {{ selected_date }}
+                                {% else %}
+                                    {{ selected_date.strftime('%b %d') }}
+                                {% endif %}
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-outline-primary">Update Mood</a>
+                            {% endif %}
+                        {% else %}
+                            {% if not selected_record.mood_rating %}
+                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
+                                Input Mood for 
+                                {% if selected_date is string %}
+                                    {{ selected_date }}
+                                {% else %}
+                                    {{ selected_date.strftime('%b %d') }}
+                                {% endif %}
+                            </a>
+                            {% elif selected_record.mood_rating %}
+                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-outline-primary">Update Mood</a>
+                            {% endif %}
                         {% endif %}
                         
                         <form method="post" action="{{ url_for('manual_fetch_data') }}" class="d-inline">
-                            <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                            <input type="hidden" name="date" value="{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}">
                             <button type="submit" class="btn btn-secondary">Fetch Whoop Data</button>
                         </form>
                         
@@ -223,10 +374,23 @@
                     </div>
                 </div>
                 {% else %}
-                <p>No data available for {{ selected_date.strftime('%A, %B %d, %Y') }}.</p>
-                <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d')) }}" class="btn btn-primary">Input Mood for {{ selected_date.strftime('%b %d') }}</a>
+                <p>No data available for 
+                    {% if selected_date is string %}
+                        {{ selected_date }}
+                    {% else %}
+                        {{ selected_date.strftime('%A, %B %d, %Y') }}
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
+                    Input Mood for 
+                    {% if selected_date is string %}
+                        {{ selected_date }}
+                    {% else %}
+                        {{ selected_date.strftime('%b %d') }}
+                    {% endif %}
+                </a>
                 <form method="post" action="{{ url_for('manual_fetch_data') }}" class="d-inline">
-                    <input type="hidden" name="date" value="{{ selected_date.strftime('%Y-%m-%d') }}">
+                    <input type="hidden" name="date" value="{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}">
                     <button type="submit" class="btn btn-secondary">Fetch Whoop Data</button>
                 </form>
                 <a href="{{ url_for('auth') }}" class="btn btn-info">Authenticate with Whoop</a>
@@ -240,14 +404,17 @@
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header">
-                <h5>Metrics Over Time</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Metrics Over Time</h5>
+                <div id="time-series-chart-debug" style="font-size: 11px; color: #666;"></div>
             </div>
             <div class="card-body">
                 {% if time_series %}
-                <div id="time-series-chart" class="chart-container"></div>
+                <div id="time-series-chart" class="chart-container shadow-sm" style="border-radius: 8px; overflow: hidden;"></div>
                 {% else %}
-                <p>Not enough data to display the time series chart.</p>
+                <div class="alert alert-secondary">
+                    <i class="fas fa-info-circle me-2"></i> Not enough data to display the time series chart.
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -256,30 +423,99 @@
 
 <!-- Correlation Analysis -->
 <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h5>Correlation Analysis</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Correlation Analysis</h5>
+                <div id="correlation-chart-debug" style="font-size: 11px; color: #666;"></div>
             </div>
             <div class="card-body">
                 {% if correlation_text %}
-                <p>{{ correlation_text }}</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> {{ correlation_text }}
+                </div>
                 {% else %}
-                <p>Not enough data points for correlation analysis.</p>
+                <div class="alert alert-secondary">
+                    <i class="fas fa-info-circle me-2"></i> Not enough data points for correlation analysis.
+                </div>
                 {% endif %}
                 
                 {% if correlation_plot %}
-                <div id="correlation-chart" class="chart-container"></div>
+                <div id="correlation-chart" class="chart-container shadow-sm" style="height: 700px; border-radius: 8px; overflow: hidden;"></div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Insights and Burnout Risk Explanation -->
+<div class="row mb-4">
+    <!-- AI Insights Card -->
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-brain me-2"></i>
+                    AI-Powered Insights
+                    <span class="badge bg-light text-primary float-end">New</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="ai-insights-preview">
+                    <p>Our AI can analyze your data to provide personalized insights and recommendations:</p>
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button id="load-insights-btn" class="btn btn-outline-primary">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <span id="insights-btn-text">Get Personalized Insights</span>
+                        </button>
+                    </div>
+                    
+                    <div id="insights-content" class="mt-3" style="display: none;">
+                        <div id="loading-insights" class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 mb-0">Analyzing your data...</p>
+                        </div>
+                        <div id="insights-result" class="border-start border-4 border-primary ps-3 py-1"></div>
+                    </div>
+                    
+                    <div class="card bg-light mb-3">
+                        <div class="card-body p-3">
+                            <h6 class="mb-2">What you can do:</h6>
+                            <ul class="mb-0 small">
+                                <li>Receive specific insights about your burnout risk</li>
+                                <li>Get personalized recommendations</li>
+                                <li>Ask questions about your health data</li>
+                                <li>Understand patterns in your metrics</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <p class="small text-muted mb-0">
+                        <i class="fas fa-lock me-1"></i>
+                        Your data is kept private and analyzed securely.
+                    </p>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small text-muted">Powered by AI</span>
+                    <a href="{{ url_for('ai_insights') }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-arrow-right me-1"></i> 
+                        More Advanced Options
+                    </a>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Burnout Risk Explanation -->
-    <div class="col-md-6 mt-4 mt-md-0">
-        <div class="card">
-            <div class="card-header">
-                <h5>Understanding Burnout Risk</h5>
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Understanding Burnout Risk</h5>
             </div>
             <div class="card-body">
                 <p>Your burnout risk score uses an advanced algorithm that analyzes:</p>
@@ -319,12 +555,42 @@
                         <tbody>
                             {% for record in records %}
                             <tr>
-                                <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
-                                <td>{{ record.recovery_score|round(1) if record.recovery_score else "N/A" }}</td>
-                                <td>{{ record.mood_rating if record.mood_rating else "N/A" }}</td>
                                 <td>
-                                    {% if record.recovery_score %}
-                                        {{ "%.1f"|format(get_burnout_risk_score(record)) }}%
+                                    {% if record.date is string %}
+                                        {{ record.date }}
+                                    {% else %}
+                                        {{ record.date.strftime('%Y-%m-%d') }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if record is mapping %}
+                                        {{ record.get('recovery_score')|round(1) if record.get('recovery_score') else "N/A" }}
+                                    {% else %}
+                                        {{ record.recovery_score|round(1) if record.recovery_score else "N/A" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if record is mapping %}
+                                        {{ record.get('mood_rating') if record.get('mood_rating') else "N/A" }}
+                                    {% else %}
+                                        {{ record.mood_rating if record.mood_rating else "N/A" }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if record.recovery_score or (record is mapping and record.get('recovery_score')) %}
+                                        {% if record is mapping %}
+                                            {% if record.get('burnout_current') is not none %}
+                                                {{ record.get('burnout_current')|round(1) }}%
+                                            {% else %}
+                                                0.0%
+                                            {% endif %}
+                                        {% else %}
+                                            {% if record.burnout_current is not none %}
+                                                {{ record.burnout_current|round(1) }}%
+                                            {% else %}
+                                                0.0%
+                                            {% endif %}
+                                        {% endif %}
                                     {% else %}
                                         N/A
                                     {% endif %}
@@ -341,15 +607,159 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    // Check if Plotly is available
+    if (typeof Plotly === 'undefined') {
+        document.getElementById('time-series-chart-debug').textContent = "ERROR: Plotly library not loaded";
+        document.getElementById('correlation-chart-debug').textContent = "ERROR: Plotly library not loaded";
+    } else {
+        document.getElementById('time-series-chart-debug').textContent = "Plotly library loaded | {{ time_series is not none }}";
+        document.getElementById('correlation-chart-debug').textContent = "Plotly library loaded | {{ correlation_plot is not none }}";
+    }
+    
+    // AI Insights handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const loadInsightsBtn = document.getElementById('load-insights-btn');
+        const insightsContent = document.getElementById('insights-content');
+        const loadingInsights = document.getElementById('loading-insights');
+        const insightsResult = document.getElementById('insights-result');
+        const insightsBtnText = document.getElementById('insights-btn-text');
+        
+        if (loadInsightsBtn) {
+            loadInsightsBtn.addEventListener('click', function() {
+                // Show the insights section and loading spinner
+                insightsContent.style.display = 'block';
+                loadingInsights.style.display = 'block';
+                insightsResult.style.display = 'none';
+                insightsBtnText.textContent = 'Analyzing...';
+                loadInsightsBtn.disabled = true;
+                
+                // Make AJAX request to get insights
+                fetch('/api/insights', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading spinner
+                    loadingInsights.style.display = 'none';
+                    
+                    // Show results
+                    if (data.success) {
+                        // Parse markdown content
+                        const htmlContent = marked.parse(data.insight);
+                        insightsResult.innerHTML = htmlContent;
+                        insightsResult.style.display = 'block';
+                        insightsBtnText.textContent = 'Refresh Insights';
+                    } else {
+                        insightsResult.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${data.error || 'Could not generate insights'}
+                            </div>
+                        `;
+                        insightsResult.style.display = 'block';
+                        insightsBtnText.textContent = 'Try Again';
+                    }
+                    
+                    // Re-enable button
+                    loadInsightsBtn.disabled = false;
+                })
+                .catch(error => {
+                    // Handle errors
+                    loadingInsights.style.display = 'none';
+                    insightsResult.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error: ${error.message || 'Something went wrong'}
+                        </div>
+                    `;
+                    insightsResult.style.display = 'block';
+                    loadInsightsBtn.disabled = false;
+                    insightsBtnText.textContent = 'Try Again';
+                });
+            });
+        }
+    
     {% if time_series %}
-    const timeSeriesData = {{ time_series|safe }};
-    Plotly.newPlot('time-series-chart', timeSeriesData.data, timeSeriesData.layout);
+    try {
+        const actualData = {{ time_series|safe }};
+        if (actualData && actualData.data && actualData.layout) {
+            // Display debug info about what traces we have
+            let traceInfo = "";
+            if (Array.isArray(actualData.data)) {
+                traceInfo = `Found ${actualData.data.length} traces: `;
+                actualData.data.forEach((trace, i) => {
+                    traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
+                });
+            }
+            document.getElementById('time-series-chart-debug').textContent = traceInfo;
+            
+            // Force all traces to be visible
+            if (Array.isArray(actualData.data)) {
+                actualData.data.forEach(trace => {
+                    trace.visible = true;
+                });
+            }
+            
+            // Enable secondary y-axis explicitly in layout
+            if (actualData.layout && !actualData.layout.yaxis2) {
+                actualData.layout.yaxis2 = {
+                    title: "Strain (0-21)",
+                    range: [0, 21],
+                    overlaying: "y",
+                    side: "right"
+                };
+            }
+            
+            Plotly.newPlot('time-series-chart', actualData.data, actualData.layout);
+            document.getElementById('time-series-chart-debug').textContent += " | Plotted successfully";
+        } else {
+            document.getElementById('time-series-chart-debug').textContent = "Invalid data structure";
+        }
+    } catch (err) {
+        document.getElementById('time-series-chart-debug').textContent = "Error: " + err.message;
+    }
+    {% else %}
+    document.getElementById('time-series-chart-debug').textContent = "No time series data passed to template";
     {% endif %}
     
     {% if correlation_plot %}
-    const correlationData = {{ correlation_plot|safe }};
-    Plotly.newPlot('correlation-chart', correlationData.data, correlationData.layout);
+    try {
+        const actualData = {{ correlation_plot|safe }};
+        if (actualData && actualData.data && actualData.layout) {
+            // Display debug info about what traces we have
+            let traceInfo = "";
+            if (Array.isArray(actualData.data)) {
+                traceInfo = `Found ${actualData.data.length} traces: `;
+                actualData.data.forEach((trace, i) => {
+                    traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
+                });
+            }
+            document.getElementById('correlation-chart-debug').textContent = traceInfo;
+            
+            // Force all traces to be visible
+            if (Array.isArray(actualData.data)) {
+                actualData.data.forEach(trace => {
+                    trace.visible = true;
+                });
+            }
+            
+            Plotly.newPlot('correlation-chart', actualData.data, actualData.layout);
+            document.getElementById('correlation-chart-debug').textContent += " | Plotted successfully";
+        } else {
+            document.getElementById('correlation-chart-debug').textContent = "Invalid data structure";
+        }
+    } catch (err) {
+        document.getElementById('correlation-chart-debug').textContent = "Error: " + err.message;
+    }
+    {% else %}
+    document.getElementById('correlation-chart-debug').textContent = "No correlation plot data passed to template";
     {% endif %}
     
     // Custom Calendar Implementation
@@ -370,7 +780,7 @@
         let calendarData = {};
         
         // Initialize with the selected date
-        const selectedDateStr = "{{ selected_date.strftime('%Y-%m-%d') }}";
+        const selectedDateStr = "{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}";
         selectedDate = new Date(selectedDateStr);
         currentMonth = selectedDate.getMonth();
         currentYear = selectedDate.getFullYear();

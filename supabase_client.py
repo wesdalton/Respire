@@ -259,75 +259,47 @@ def init_supabase_tables():
         # We use the service client for this operation
         service = get_service_client()
         
-        # This SQL creates the tables if they don't exist
-        # Note: This is a simplified approach; in production, you'd use migrations
-        sql = """
-        -- Whoop tokens table
-        CREATE TABLE IF NOT EXISTS whoop_tokens (
-            id SERIAL PRIMARY KEY,
-            user_id UUID NOT NULL REFERENCES auth.users(id),
-            access_token TEXT,
-            refresh_token TEXT,
-            token_expiry TIMESTAMP,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP
-        );
+        # Create whoop_tokens table
+        print("Creating whoop_tokens table...")
+        service.table("whoop_tokens").insert({
+            "id": 1,  # Dummy row to create table
+            "user_id": "00000000-0000-0000-0000-000000000000",
+            "access_token": "dummy",
+            "refresh_token": "dummy",
+            "token_expiry": datetime.now().isoformat(),
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
         
-        -- Daily metrics table
-        CREATE TABLE IF NOT EXISTS daily_metrics (
-            id SERIAL PRIMARY KEY,
-            user_id UUID NOT NULL REFERENCES auth.users(id),
-            date DATE NOT NULL,
-            recovery_score FLOAT,
-            hrv FLOAT,
-            resting_hr FLOAT,
-            spo2_percentage FLOAT,
-            skin_temp_celsius FLOAT,
-            strain FLOAT,
-            max_hr FLOAT,
-            avg_hr FLOAT,
-            kilojoules FLOAT,
-            sleep_quality FLOAT,
-            sleep_consistency FLOAT,
-            sleep_efficiency FLOAT,
-            total_sleep_time FLOAT,
-            deep_sleep_time FLOAT,
-            rem_sleep_time FLOAT,
-            respiratory_rate FLOAT,
-            workout_count INTEGER,
-            workout_strain FLOAT,
-            mood_rating INTEGER,
-            energy_level INTEGER,
-            stress_level INTEGER,
-            notes TEXT,
-            burnout_current FLOAT,
-            burnout_trend FLOAT,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP,
-            UNIQUE(user_id, date)
-        );
+        # Create daily_metrics table
+        print("Creating daily_metrics table...")
+        service.table("daily_metrics").insert({
+            "id": 1,  # Dummy row to create table
+            "user_id": "00000000-0000-0000-0000-000000000000",
+            "date": datetime.now().date().isoformat(),
+            "recovery_score": 0,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
         
-        -- User settings table
-        CREATE TABLE IF NOT EXISTS user_settings (
-            id SERIAL PRIMARY KEY,
-            user_id UUID NOT NULL REFERENCES auth.users(id),
-            calendar_provider TEXT,
-            calendar_id TEXT,
-            settings JSONB,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP,
-            UNIQUE(user_id)
-        );
+        # Create user_settings table
+        print("Creating user_settings table...")
+        service.table("user_settings").insert({
+            "id": 1,  # Dummy row to create table
+            "user_id": "00000000-0000-0000-0000-000000000000",
+            "calendar_provider": "dummy",
+            "calendar_id": "dummy",
+            "settings": "{}",
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
         
-        -- Create indexes
-        CREATE INDEX IF NOT EXISTS idx_whoop_tokens_user_id ON whoop_tokens (user_id);
-        CREATE INDEX IF NOT EXISTS idx_daily_metrics_user_id ON daily_metrics (user_id);
-        CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_metrics (date);
-        CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings (user_id);
-        """
+        # Delete dummy data
+        print("Removing dummy data...")
+        service.table("whoop_tokens").delete().eq("id", 1).execute()
+        service.table("daily_metrics").delete().eq("id", 1).execute()
+        service.table("user_settings").delete().eq("id", 1).execute()
         
-        # Execute the SQL to create tables
-        response = service.rpc("exec_sql", {"sql": sql}).execute()
         return True
     except Exception as e:
         print(f"Error initializing Supabase tables: {str(e)}")
