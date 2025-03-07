@@ -34,7 +34,7 @@
                     <div id="chat-messages" class="chat-container p-3" style="height: 650px; overflow-y: auto;">
                         <!-- Initial AI Message -->
                         <div class="chat-message ai-message mb-3">
-                            <div class="message-content p-3 rounded shadow-sm">
+                            <div class="message-content p-2 px-3 rounded shadow-sm">
                                 <div id="initial-insight" class="markdown-content smaller-text">
                                     {% if insights %}
                                     {{ insights|safe }}
@@ -220,13 +220,33 @@
     margin-bottom: 0;
 }
 
-.message-content h2 {
-    font-size: 1rem;
+.message-content hr {
+    margin: 0.5rem 0;
+    opacity: 0.2;
+}
+
+.message-content strong {
+    font-weight: 600;
+}
+
+.message-content h1 {
+    font-size: 1.1rem;
     margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.message-content h2 {
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
 }
 
 .message-content h3 {
     font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
 }
 
 .message-content p, .message-content li {
@@ -236,18 +256,26 @@
 
 .message-content ul {
     padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .smaller-text p, .smaller-text li {
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
+}
+
+.smaller-text h1 {
+    font-size: 1rem !important;
+    margin-bottom: 0.4rem !important;
 }
 
 .smaller-text h2 {
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0.3rem !important;
 }
 
 .smaller-text h3 {
-    font-size: 0.9rem !important;
+    font-size: 0.85rem !important;
+    margin-bottom: 0.2rem !important;
 }
 
 .message-time {
@@ -449,7 +477,7 @@
             const aiMessageDiv = document.createElement('div');
             aiMessageDiv.className = 'chat-message ai-message mb-3';
             aiMessageDiv.innerHTML = `
-                <div class="message-content p-3 rounded shadow-sm">
+                <div class="message-content p-2 px-3 rounded shadow-sm">
                     <div class="markdown-content smaller-text">${marked.parse(message)}</div>
                 </div>
                 <div class="message-time text-muted small mt-1">
