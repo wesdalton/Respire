@@ -1,62 +1,252 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1 class="mb-4">Mood Input</h1>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5>How are you feeling on {{ mood_date.strftime('%A, %B %d, %Y') }}?</h5>
-        <a href="{{ url_for('dashboard', selected_date=date_str) }}" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Mood Input</li>
+                </ol>
+            </nav>
+            
+            <h2 class="mb-3">
+                <i class="fas fa-smile text-primary me-2"></i> 
+                {% if record and record.mood_rating %}Update Mood{% else %}Daily Check-in{% endif %}
+            </h2>
+        </div>
     </div>
-    <div class="card-body">
-        <form method="post" action="{{ url_for('input_mood', input_date=date_str) }}">
-            <input type="hidden" name="date" value="{{ date_str }}">
-            <div class="mb-4">
-                <label for="mood_rating" class="form-label">Mood Rating (1-10)</label>
-                <div class="mood-scale-container">
-                    <div class="mood-scale">
-                        {% for i in range(1, 11) %}
-                        <div class="form-check mood-option">
-                            <input class="form-check-input" type="radio" name="mood_rating" id="mood{{ i }}" value="{{ i }}" {% if record and record.mood_rating == i %}checked{% endif %} required>
-                            <label class="form-check-label" for="mood{{ i }}">
-                                {{ i }}
-                                {% if i == 1 %}
-                                <span class="mood-label">Poor</span>
-                                {% elif i == 5 %}
-                                <span class="mood-label">Neutral</span>
-                                {% elif i == 10 %}
-                                <span class="mood-label">Excellent</span>
-                                {% endif %}
-                            </label>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">How are you feeling today?</h5>
+                    <span class="text-muted">{{ mood_date.strftime('%A, %B %d, %Y') }}</span>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('input_mood', input_date=date_str) }}" id="mood-form">
+                        <input type="hidden" name="date" value="{{ date_str }}">
+                        
+                        <!-- Emoji Mood Selector -->
+                        <div class="mb-4">
+                            <div class="mood-emoji-selector text-center">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-10">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="small text-muted">Poor</span>
+                                            <span class="small text-muted">Excellent</span>
+                                        </div>
+                                        
+                                        <div class="mood-emoji-row">
+                                            {% for i in range(1, 11) %}
+                                            <div class="mood-emoji-option {% if record and record.mood_rating == i %}selected{% endif %}" data-value="{{ i }}">
+                                                <input type="radio" name="mood_rating" id="mood{{ i }}" value="{{ i }}" 
+                                                       {% if record and record.mood_rating == i %}checked{% endif %} 
+                                                       required class="visually-hidden">
+                                                <label for="mood{{ i }}" class="mood-emoji-label">
+                                                    {% if i <= 2 %}
+                                                    <i class="fas fa-sad-cry"></i>
+                                                    {% elif i <= 4 %}
+                                                    <i class="fas fa-frown"></i>
+                                                    {% elif i <= 6 %}
+                                                    <i class="fas fa-meh"></i>
+                                                    {% elif i <= 8 %}
+                                                    <i class="fas fa-smile"></i>
+                                                    {% else %}
+                                                    <i class="fas fa-grin-stars"></i>
+                                                    {% endif %}
+                                                    <div class="mood-value">{{ i }}</div>
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="progress mt-3" style="height: 6px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: 30%"></div>
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: 30%"></div>
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: 40%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        {% endfor %}
+                        
+                        <div class="mb-4">
+                            <label for="notes" class="form-label">Notes about your day (optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                      placeholder="How was your day? What affected your mood or energy levels?">{{ record.notes if record and record.notes else '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('dashboard', selected_date=date_str) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back
+                            </a>
+                            
+                            <button type="submit" class="btn btn-primary px-4">
+                                {% if record and record.mood_rating %}
+                                <i class="fas fa-save me-1"></i> Update
+                                {% else %}
+                                <i class="fas fa-check me-1"></i> Save
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle text-info me-2"></i> Mood Guide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-0">
+                            <div class="d-flex align-items-center">
+                                <div class="mood-guide-icon text-danger me-3">
+                                    <i class="fas fa-frown"></i>
+                                </div>
+                                <div>
+                                    <strong>1-3: Low</strong>
+                                    <p class="mb-0 small text-muted">Exhausted, stressed, burned out, or emotionally drained</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex align-items-center">
+                                <div class="mood-guide-icon text-warning me-3">
+                                    <i class="fas fa-meh"></i>
+                                </div>
+                                <div>
+                                    <strong>4-6: Neutral</strong>
+                                    <p class="mb-0 small text-muted">Neither great nor poor, some stress but manageable</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item px-0">
+                            <div class="d-flex align-items-center">
+                                <div class="mood-guide-icon text-success me-3">
+                                    <i class="fas fa-smile"></i>
+                                </div>
+                                <div>
+                                    <strong>7-10: Good</strong>
+                                    <p class="mb-0 small text-muted">Energetic, positive, motivated, and emotionally well</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <small>Consistent daily ratings help build a more accurate picture of your burnout risk over time.</small>
                     </div>
                 </div>
             </div>
-            
-            <div class="mb-3">
-                <label for="notes" class="form-label">Notes (optional)</label>
-                <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Any additional notes about your day...">{{ record.notes if record and record.notes else '' }}</textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
-        </form>
+        </div>
     </div>
 </div>
+{% endblock %}
 
-<div class="card mt-4">
-    <div class="card-header">
-        <h5>Understanding the Mood Scale</h5>
-    </div>
-    <div class="card-body">
-        <p>Use this guide to help you rate your mood consistently:</p>
-        <ul>
-            <li><strong>1-3:</strong> Feeling significantly burned out, overwhelmed, or exhausted</li>
-            <li><strong>4-6:</strong> Neutral or mixed feelings, some stress but manageable</li>
-            <li><strong>7-10:</strong> Feeling good to excellent, energetic and positive</li>
-        </ul>
-        <p>Consistent daily ratings will help build a more accurate picture of your burnout risk over time.</p>
-    </div>
-</div>
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up mood emoji selector interactivity
+    const moodOptions = document.querySelectorAll('.mood-emoji-option');
+    
+    moodOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remove selected class from all options
+            moodOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            
+            // Check the associated radio button
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.mood-emoji-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+
+.mood-emoji-option {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.75rem;
+    border-radius: 50%;
+}
+
+.mood-emoji-option:hover {
+    transform: translateY(-5px);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.mood-emoji-option.selected {
+    transform: translateY(-5px);
+    background-color: rgba(0, 123, 255, 0.15);
+}
+
+.mood-emoji-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.mood-emoji-label i {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.mood-emoji-option:nth-child(-n+2) i {
+    color: #dc3545;
+}
+
+.mood-emoji-option:nth-child(n+3):nth-child(-n+4) i {
+    color: #e67c22;
+}
+
+.mood-emoji-option:nth-child(n+5):nth-child(-n+6) i {
+    color: #ffc107;
+}
+
+.mood-emoji-option:nth-child(n+7):nth-child(-n+8) i {
+    color: #28a745;
+}
+
+.mood-emoji-option:nth-child(n+9) i {
+    color: #20c997;
+}
+
+.mood-value {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.mood-guide-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(0,0,0,0.05);
+}
+</style>
 {% endblock %}
