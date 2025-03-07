@@ -28,6 +28,8 @@ class BurnoutInsightsEngine:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             logger.warning("No OpenAI API key provided. AI insights will not be available.")
+        else:
+            logger.info(f"Using OpenAI API key: {self.api_key[:4]}...{self.api_key[-4:] if len(self.api_key) > 8 else ''}")
         self.api_url = "https://api.openai.com/v1/chat/completions"
     
     def _prepare_metrics_context(self, metrics_data, days=7):
@@ -275,10 +277,14 @@ def get_burnout_insights(metrics_data, query=None):
     """
     global insights_engine
     
+    # Reload env variables to ensure we have the latest
+    load_dotenv(override=True)
+    
     # Set the API key if it's in the environment
     api_key = os.getenv("OPENAI_API_KEY")
-    if api_key and not insights_engine.api_key:
-        insights_engine = BurnoutInsightsEngine(api_key)
+    if api_key and api_key.strip():
+        logger.info(f"Found API key in environment: {api_key[:5]}...{api_key[-5:] if len(api_key) > 10 else ''}")
+        insights_engine = BurnoutInsightsEngine(api_key.strip())
     
     return insights_engine.generate_insight(metrics_data, query)
 
