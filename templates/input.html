@@ -39,14 +39,14 @@
                                             <span class="small text-muted">Excellent</span>
                                         </div>
                                         
-                                        <div class="row mood-emoji-grid">
-                                            {% for i in range(1, 11) %}
-                                            <div class="col">
-                                                <div class="mood-emoji-option {% if record and record.mood_rating == i %}selected{% endif %}" data-value="{{ i }}">
-                                                    <input type="radio" name="mood_rating" id="mood{{ i }}" value="{{ i }}" 
-                                                        {% if record and record.mood_rating == i %}checked{% endif %} 
-                                                        required class="visually-hidden">
-                                                    <label for="mood{{ i }}" class="mood-emoji-label">
+                                        <div class="mood-buttons text-center">
+                                            <div class="btn-group mood-btn-group" role="group">
+                                                {% for i in range(1, 11) %}
+                                                <input type="radio" class="btn-check" name="mood_rating" id="mood{{ i }}" value="{{ i }}" 
+                                                    {% if record and record.mood_rating == i %}checked{% endif %} 
+                                                    required>
+                                                <label class="btn btn-outline-mood mood-{{ i }}" for="mood{{ i }}">
+                                                    <div class="mood-emoji-content">
                                                         {% if i <= 2 %}
                                                         <i class="fas fa-sad-cry"></i>
                                                         {% elif i <= 4 %}
@@ -58,11 +58,11 @@
                                                         {% else %}
                                                         <i class="fas fa-grin-stars"></i>
                                                         {% endif %}
-                                                        <div class="mood-value">{{ i }}</div>
-                                                    </label>
-                                                </div>
+                                                        <span class="mood-value">{{ i }}</span>
+                                                    </div>
+                                                </label>
+                                                {% endfor %}
                                             </div>
-                                            {% endfor %}
                                         </div>
                                         
                                         <div class="progress mt-3" style="height: 6px;">
@@ -156,113 +156,109 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set up mood emoji selector interactivity
-    const moodOptions = document.querySelectorAll('.mood-emoji-option');
-    const moodLabels = document.querySelectorAll('.mood-emoji-label');
-    
-    // Add click event to the options themselves
-    moodOptions.forEach(option => {
-        option.addEventListener('click', function(e) {
-            selectMoodOption(this);
-        });
-    });
-    
-    // Add click event to the labels
-    moodLabels.forEach(label => {
-        label.addEventListener('click', function(e) {
-            e.preventDefault(); // Prevent default label behavior
-            const option = this.closest('.mood-emoji-option');
-            selectMoodOption(option);
-        });
-    });
-    
-    // Function to select a mood option
-    function selectMoodOption(option) {
-        // Remove selected class from all options
-        moodOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        // Add selected class to clicked option
-        option.classList.add('selected');
-        
-        // Check the associated radio button
-        const radio = option.querySelector('input[type="radio"]');
-        radio.checked = true;
-    }
-});
+// No custom JavaScript needed - Bootstrap's btn-check handles the selection automatically
 </script>
 {% endblock %}
 
 {% block styles %}
 <style>
-.mood-emoji-grid {
+.mood-buttons {
     padding: 1rem 0;
+}
+
+.mood-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+}
+
+.btn-outline-mood {
+    padding: 10px 5px;
+    border-radius: 8px;
+    margin: 0 2px;
+    border: 1px solid #dee2e6;
+    width: calc(10% - 4px);
+    max-width: 50px;
     text-align: center;
-}
-
-.mood-emoji-option {
     position: relative;
-    cursor: pointer;
     transition: all 0.2s ease;
-    padding: 0.5rem 0;
-    border-radius: 50%;
-    margin: 0 auto;
-    width: 50px;
 }
 
-.mood-emoji-option:hover {
-    transform: translateY(-5px);
-    background-color: rgba(0, 123, 255, 0.1);
+.btn-outline-mood:hover {
+    transform: translateY(-3px);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.mood-emoji-option.selected {
+.btn-check:checked + .btn-outline-mood {
     transform: translateY(-5px);
-    background-color: rgba(0, 123, 255, 0.15);
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    border: 2px solid rgba(0, 123, 255, 0.5);
+    border-width: 2px;
 }
 
-.mood-emoji-label {
+.mood-emoji-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-    padding: 8px 0;
 }
 
-.mood-emoji-label i {
+.mood-emoji-content i {
     font-size: 1.5rem;
-    margin-bottom: 0.25rem;
-    display: block;
-}
-
-/* Emoji colors */
-.mood-emoji-grid .col:nth-child(-n+2) .mood-emoji-option i {
-    color: #dc3545; /* Red */
-}
-
-.mood-emoji-grid .col:nth-child(n+3):nth-child(-n+4) .mood-emoji-option i {
-    color: #e67c22; /* Orange */
-}
-
-.mood-emoji-grid .col:nth-child(n+5):nth-child(-n+6) .mood-emoji-option i {
-    color: #ffc107; /* Yellow */
-}
-
-.mood-emoji-grid .col:nth-child(n+7):nth-child(-n+8) .mood-emoji-option i {
-    color: #28a745; /* Green */
-}
-
-.mood-emoji-grid .col:nth-child(n+9) .mood-emoji-option i {
-    color: #20c997; /* Teal */
+    margin-bottom: 3px;
 }
 
 .mood-value {
     font-size: 0.8rem;
+    display: block;
     color: #6c757d;
+}
+
+/* Emoji colors */
+.mood-1 i, .mood-2 i {
+    color: #dc3545; /* Red */
+}
+
+.mood-3 i, .mood-4 i {
+    color: #e67c22; /* Orange */
+}
+
+.mood-5 i, .mood-6 i {
+    color: #ffc107; /* Yellow */
+}
+
+.mood-7 i, .mood-8 i {
+    color: #28a745; /* Green */
+}
+
+.mood-9 i, .mood-10 i {
+    color: #20c997; /* Teal */
+}
+
+/* Button border colors when selected */
+.btn-check:checked + .mood-1, .btn-check:checked + .mood-2 {
+    border-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.btn-check:checked + .mood-3, .btn-check:checked + .mood-4 {
+    border-color: #e67c22;
+    background-color: rgba(230, 124, 34, 0.1);
+}
+
+.btn-check:checked + .mood-5, .btn-check:checked + .mood-6 {
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.btn-check:checked + .mood-7, .btn-check:checked + .mood-8 {
+    border-color: #28a745;
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.btn-check:checked + .mood-9, .btn-check:checked + .mood-10 {
+    border-color: #20c997;
+    background-color: rgba(32, 201, 151, 0.1);
 }
 
 .mood-guide-icon {
