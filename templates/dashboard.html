@@ -132,24 +132,40 @@
                     <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
                         <div class="metric-card">
                             <h6>Mood Rating</h6>
-                            <div class="metric-value 
+                            <div class="metric-value">
                                 {% if selected_record is mapping %}
-                                    {% if selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 6 %}text-success
-                                    {% elif selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 3 %}text-warning
-                                    {% elif selected_record.get('mood_rating') is not none %}text-danger
-                                    {% else %}text-muted{% endif %}
+                                    {% if selected_record.get('mood_rating') is not none %}
+                                        <span class="
+                                            {% if selected_record.get('mood_rating') > 6 %}text-success
+                                            {% elif selected_record.get('mood_rating') > 3 %}text-warning
+                                            {% else %}text-danger{% endif %}">
+                                            {{ selected_record.get('mood_rating') }}
+                                            <span class="fs-6 text-muted">/10</span>
+                                        </span>
+                                    {% else %}
+                                        <!-- Button to add mood when none exists -->
+                                        <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus-circle me-1"></i> Add Mood
+                                        </a>
+                                    {% endif %}
                                 {% else %}
-                                    {% if selected_record.mood_rating is not none and selected_record.mood_rating > 6 %}text-success
-                                    {% elif selected_record.mood_rating is not none and selected_record.mood_rating > 3 %}text-warning
-                                    {% elif selected_record.mood_rating is not none %}text-danger
-                                    {% else %}text-muted{% endif %}
-                                {% endif %}">
-                                {% if selected_record is mapping %}
-                                    {{ selected_record.get('mood_rating') if selected_record.get('mood_rating') is not none else "N/A" }}
-                                {% else %}
-                                    {{ selected_record.mood_rating if selected_record.mood_rating is not none else "N/A" }}
+                                    {% if selected_record.mood_rating is not none %}
+                                        <span class="
+                                            {% if selected_record.mood_rating > 6 %}text-success
+                                            {% elif selected_record.mood_rating > 3 %}text-warning
+                                            {% else %}text-danger{% endif %}">
+                                            {{ selected_record.mood_rating }}
+                                            <span class="fs-6 text-muted">/10</span>
+                                        </span>
+                                    {% else %}
+                                        <!-- Button to add mood when none exists -->
+                                        <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus-circle me-1"></i> Add Mood
+                                        </a>
+                                    {% endif %}
                                 {% endif %}
-                                <span class="fs-6 text-muted">/10</span>
                             </div>
                             <div class="metric-badge">
                                 {% if selected_record is mapping %}
@@ -319,32 +335,18 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-md-12">
-                        {% if selected_record is mapping %}
-                            {% if not selected_record.get('mood_rating') %}
-                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
-                                Input Mood for 
-                                {% if selected_date is string %}
-                                    {{ selected_date }}
-                                {% else %}
-                                    {{ selected_date.strftime('%b %d') }}
-                                {% endif %}
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-outline-primary">Update Mood</a>
-                            {% endif %}
-                        {% else %}
-                            {% if not selected_record.mood_rating %}
-                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
-                                Input Mood for 
-                                {% if selected_date is string %}
-                                    {{ selected_date }}
-                                {% else %}
-                                    {{ selected_date.strftime('%b %d') }}
-                                {% endif %}
-                            </a>
-                            {% elif selected_record.mood_rating %}
-                            <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-outline-primary">Update Mood</a>
-                            {% endif %}
+                        {% if selected_record is mapping and selected_record.get('mood_rating') is not none or not selected_record is mapping and selected_record.mood_rating is not none %}
+                            <div class="btn-group me-2">
+                                <a href="{{ url_for('input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i> Update Mood
+                                </a>
+                                <a href="{{ url_for('delete_mood', selected_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('Are you sure you want to delete your mood rating for this day?')">
+                                    <i class="fas fa-trash-alt me-1"></i> Delete Mood
+                                </a>
+                            </div>
                         {% endif %}
                         
                         <a href="{{ url_for('settings') }}" class="btn btn-outline-secondary">

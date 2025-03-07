@@ -513,6 +513,57 @@ def input_mood(input_date=None):
     
     return render_template('input.html', now=datetime.now(), mood_date=mood_date, date_str=date_str, record=record)
 
+@app.route('/delete_mood/<string:selected_date>')
+@login_required
+def delete_mood(selected_date):
+    """
+    Delete a mood entry for a specific date
+    """
+    user_id = get_user_id()
+    
+    try:
+        # Parse the date
+        try:
+            entry_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
+            date_str = selected_date
+        except ValueError:
+            flash("Invalid date format.")
+            return redirect(url_for('dashboard'))
+        
+        # Get existing data for the date
+        if USE_SUPABASE:
+            selected_records = get_daily_metrics(user_id, date_str)
+            
+            if selected_records and len(selected_records) > 0:
+                record = selected_records[0]
+                
+                # Create updated record without mood data
+                updated_record = {
+                    "date": date_str,
+                    "mood_rating": None,
+                    "notes": None
+                }
+                
+                # Keep all other metrics
+                for key, value in record.items():
+                    if key not in ["mood_rating", "notes", "date", "user_id", "id"]:
+                        updated_record[key] = value
+                
+                # Update the record in Supabase
+                save_daily_metrics(user_id, updated_record)
+                flash("Mood rating deleted successfully.")
+            else:
+                flash("No mood data found for this date.")
+        else:
+            # SQLite implementation would go here
+            pass
+    
+    except Exception as e:
+        logger.error(f"Error deleting mood: {str(e)}")
+        flash(f"Error deleting mood: {str(e)}")
+    
+    return redirect(url_for('dashboard', selected_date=date_str))
+
 @app.route('/fetch_whoop_data', methods=['POST'])
 @login_required
 def manual_fetch_data():
