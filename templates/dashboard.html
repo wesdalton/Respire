@@ -232,7 +232,11 @@
                         <div class="metric-card highlight-card">
                             <div class="d-flex align-items-center justify-content-between">
                                 <h6>Burnout Risk</h6>
-                                <span class="badge bg-info small" title="Based on your recovery, mood and strain patterns">
+                                <span class="badge bg-info small info-badge" 
+                                     data-bs-toggle="tooltip" 
+                                     data-bs-placement="top" 
+                                     data-bs-html="true"
+                                     title="<div class='p-1'>Calculated from your recovery scores, mood ratings, HRV, sleep quality, and strain-recovery balance over time</div>">
                                     <i class="fas fa-info-circle"></i> About
                                 </span>
                             </div>
@@ -619,6 +623,10 @@
     
     // Main document ready handler - contains all JavaScript initialization
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        
         // AI Insights handler
         const loadInsightsBtn = document.getElementById('load-insights-btn');
         const insightsContent = document.getElementById('insights-content');
