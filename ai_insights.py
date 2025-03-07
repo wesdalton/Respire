@@ -218,8 +218,9 @@ Keep your entire response under 350 words, prioritizing specificity and relevanc
             except requests.exceptions.RequestException as e:
                 logger.error(f"API request error: {str(e)}")
                 return {
-                    "error": "API request failed",
-                    "insight": "Unable to connect to AI service. Please try again later."
+                    "success": False,
+                    "error": "OpenAI API key missing or invalid",
+                    "insight": "AI insights require a valid OpenAI API key. Please add your API key to the .env file."
                 }
             
             # Extract the AI's reply
