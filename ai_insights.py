@@ -213,22 +213,48 @@ Keep your entire response under 350 words, prioritizing specificity and relevanc
             }
             
             try:
+                logger.info(f"Making API request to {self.api_url} with model: {payload['model']}")
+                
+                # Debug the request being sent
+                debug_payload = payload.copy()
+                if 'messages' in debug_payload:
+                    # Just show the structure without the full content
+                    debug_payload['messages'] = f"[{len(debug_payload['messages'])} messages]"
+                logger.info(f"Request payload: {debug_payload}")
+                
                 response = requests.post(
                     self.api_url,
                     headers=headers,
-                    data=json.dumps(payload),
+                    json=payload,  # Use json parameter instead of data
                     timeout=30  # Add timeout to prevent hanging requests
                 )
+                
+                # Log response status
+                logger.info(f"API response status: {response.status_code}")
                 
                 # Check if the request was successful
                 response.raise_for_status()
                 response_data = response.json()
+                
+                # Log a snippet of the response
+                logger.info(f"API response received successfully")
+                
             except requests.exceptions.RequestException as e:
                 logger.error(f"API request error: {str(e)}")
+                
+                # Get more details from the response if available
+                error_detail = ""
+                try:
+                    if hasattr(e, 'response') and e.response is not None:
+                        error_json = e.response.json()
+                        error_detail = f" - {error_json.get('error', {}).get('message', '')}"
+                except:
+                    pass
+                
                 return {
                     "success": False,
-                    "error": "OpenAI API key missing or invalid",
-                    "insight": "AI insights require a valid OpenAI API key. Please add your API key to the .env file."
+                    "error": f"OpenAI API key error: {str(e)}{error_detail}",
+                    "insight": "There was an issue with your OpenAI API key. Check if it's valid and has sufficient credits, then update it in Settings."
                 }
             
             # Extract the AI's reply
