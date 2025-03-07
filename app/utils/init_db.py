@@ -3,7 +3,8 @@ Initialize the database with the updated schema.
 This script drops all existing tables and recreates them.
 """
 
-from database import Base, engine, session
+# Import from the app package structure
+from app.database.sqlite import Base, engine, session
 from datetime import datetime, timedelta
 import random
 

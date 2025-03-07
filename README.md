@@ -1,110 +1,165 @@
 # Burnout Predictor
 
-A web application that helps predict and prevent burnout by analyzing your Whoop health data combined with self-reported mood ratings.
+A sophisticated web application that helps predict and prevent burnout by analyzing your WHOOP health data combined with self-reported mood ratings. It leverages AI to provide personalized insights and recommendations based on your unique health patterns.
 
 ## Features
 
-- Integration with Whoop API to fetch daily health metrics (recovery score, strain, HRV, etc.)
-- Daily mood tracking through a simple web interface
-- Data visualization dashboard showing trends over time
-- Correlation analysis between physical recovery metrics and subjective mood
-- Burnout risk calculation based on combined metrics
+- **WHOOP API Integration:** Automatically fetches daily health metrics (recovery score, strain, HRV, sleep quality)
+- **Mood Tracking:** Simple and intuitive interface to log daily mood and notes
+- **Advanced Analytics:** Sophisticated burnout risk algorithm using multiple health metrics
+- **Data Visualization:** Interactive charts showing trends and correlations over time
+- **AI-Powered Insights:** Personalized recommendations and analysis using OpenAI
+- **Modern Dashboard:** Clean, visually appealing interface optimized for usability
+- **Multi-device Support:** Responsive design works on desktop and mobile
+- **Cloud Synchronization:** Secure data storage with Supabase (with SQLite fallback)
 
-## Setup Instructions
+## Technology Stack
+
+- **Backend:** Python, Flask, SQLAlchemy
+- **Database:** Supabase (PostgreSQL) with SQLite fallback
+- **API:** RESTful architecture with JSON endpoints
+- **Authentication:** Secure user login via Supabase Auth
+- **Data Analysis:** Pandas, NumPy, SciPy
+- **Visualization:** Plotly interactive charts
+- **AI/ML:** OpenAI API integration
+- **Frontend:** HTML, CSS, JavaScript with Bootstrap 5
+
+## Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- Whoop account and API access (client ID and secret)
-- Supabase account (optional, for cloud storage and authentication)
+- WHOOP account and API credentials
+- Supabase account (recommended)
+- OpenAI API key (for AI insights)
 
-### Installation
+### Setup
 
-1. Clone this repository:
-   ```
+1. **Clone the repository**
+   ```bash
    git clone https://github.com/yourusername/burnout-predictor.git
    cd burnout-predictor
    ```
 
-2. Create a virtual environment and install dependencies:
-   ```
+2. **Set up virtual environment**
+   ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file in the project root with your credentials:
-
-   With SQLite (local storage):
-   ```
-   WHOOP_CLIENT_ID=your_client_id
-   WHOOP_CLIENT_SECRET=your_client_secret
-   WHOOP_REDIRECT_URI=your_redirect_uri
-   DATABASE_URL=sqlite:///burnout_predictor.db
-   FLASK_SECRET_KEY=your_random_secret_key
+3. **Configure environment variables**
+   ```bash
+   cp example.env .env
+   # Edit .env file with your credentials
    ```
 
-   With Supabase (cloud storage and authentication):
-   ```
-   WHOOP_CLIENT_ID=your_client_id
-   WHOOP_CLIENT_SECRET=your_client_secret
-   WHOOP_REDIRECT_URI=your_redirect_uri
-   DATABASE_URL=sqlite:///burnout_predictor.db
+4. **Initialize the database**
+   ```bash
+   # If using Supabase (recommended)
+   python -m app.database.supabase
    
-   # Supabase credentials
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_anon_key
-   SUPABASE_SERVICE_KEY=your_supabase_service_role_key
-   
-   # For Admin user
-   ADMIN_EMAIL=admin@example.com
-   ADMIN_PASSWORD=secure_password
-   SUPABASE_USER_ID=admin_user_id_after_signup
-   
-   FLASK_SECRET_KEY=your_random_secret_key
+   # Or create a test account with sample data
+   python create_test_account.py
    ```
-
-### Supabase Setup (Optional)
-
-If you want to use Supabase for authentication and cloud storage:
-
-1. Create a new project in Supabase
-2. Get your project URL and API keys from the project settings
-3. Add them to your `.env` file as shown above
-4. Run the initialization script to set up the database tables:
-   ```
-   python init_supabase.py
-   ```
-5. After creating an admin user, copy the user ID to your `.env` file as `SUPABASE_USER_ID`
 
 ### Running the Application
 
-1. Start the Flask server:
-   ```
-   python app.py
-   ```
+**Development mode**
+```bash
+python run.py
+```
 
-2. Open your browser and navigate to `http://localhost:5000`
+**Production mode**
+```bash
+gunicorn 'app:create_app()' --bind 0.0.0.0:$PORT
+```
 
-## Usage
+Access the application at http://localhost:3000
 
-1. **Dashboard:** View your metrics, including recovery score, mood rating, and burnout risk
-2. **Input Mood:** Rate your daily mood on a scale of 1-10 and add optional notes
-3. **Data Analysis:** Explore correlations between your physical recovery and subjective mood
+## Project Structure
 
-## Data Privacy
+```
+burnout-predictor/
+├── app/                  # Application package
+│   ├── __init__.py       # App factory and configuration
+│   ├── auth/             # Authentication
+│   ├── api/              # API endpoints
+│   ├── core/             # Main functionality
+│   ├── database/         # Database access
+│   ├── services/         # Business logic
+│   ├── static/           # Assets (CSS, JS, images)
+│   ├── templates/        # HTML templates
+│   └── utils/            # Common utilities
+├── tests/                # Test suite
+├── .env                  # Environment variables (create from example.env)
+├── example.env           # Example environment file
+├── requirements.txt      # Python dependencies
+├── run.py                # Application entry point
+└── README.md             # Documentation
+```
 
-All data is stored locally in a SQLite database by default, or in your Supabase account if you choose that option. No data is shared with external services except for the necessary API calls to fetch your Whoop data and to authenticate with Supabase if that option is enabled.
+## WHOOP API Setup
 
-## Future Enhancements
+1. Create a developer account at [WHOOP Developer Portal](https://developer.whoop.com/)
+2. Register a new application
+3. Set your redirect URI to `http://localhost:3000/` (development) or your production URL
+4. Add your client ID and secret to the `.env` file
 
-- Machine learning model to better predict burnout risk
-- Additional data sources (calendar, productivity, screen time)
-- Personalized recommendations based on your burnout risk
-- Mobile app integration
-- Multi-user support with team insights (ideal for managers or HR)
-- API integrations with other health and productivity tools
+## Supabase Setup
+
+Refer to [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed instructions on setting up your Supabase project.
+
+## OpenAI Setup
+
+1. Create an account at [OpenAI](https://platform.openai.com/)
+2. Generate an API key
+3. Add the key to your `.env` file as `OPENAI_API_KEY`
+
+## Usage Guide
+
+1. **Account Setup**
+   - Sign up for an account
+   - Connect your WHOOP account via OAuth
+
+2. **Daily Usage**
+   - View your health metrics dashboard
+   - Log your daily mood (1-10 scale)
+   - Check your burnout risk score
+
+3. **Analysis**
+   - Explore trend charts
+   - View correlations between metrics
+   - Get AI-powered insights and recommendations
+
+4. **Settings**
+   - Configure integrations
+   - Manage notification preferences
+   - Update AI model settings
+
+## Data Privacy & Security
+
+- All data is encrypted in transit and at rest
+- Supabase provides enterprise-grade security for cloud storage
+- Local SQLite option available for complete privacy
+- OpenAI API calls follow strict data minimization principles
+- No third-party analytics or tracking
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgements
+
+- WHOOP for providing the health metrics API
+- Supabase for the excellent database platform
+- OpenAI for the AI insights technology
+- All contributors who have helped build this application

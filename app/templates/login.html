@@ -19,7 +19,7 @@
                         {% endif %}
                     {% endwith %}
                     
-                    <form method="post" action="{{ url_for('login') }}">
+                    <form method="post" action="{{ url_for('auth.login') }}">
                         <div class="form-group mb-3">
                             <label for="email">Email</label>
                             <input type="email" class="form-control" id="email" name="email" required>
@@ -35,7 +35,7 @@
                     
                     <hr>
                     <div class="text-center">
-                        <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
+                        <p>Don't have an account? <a href="{{ url_for('auth.signup') }}">Sign up</a></p>
                     </div>
                 </div>
             </div>

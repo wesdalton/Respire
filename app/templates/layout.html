@@ -12,17 +12,17 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('dashboard') }}">Burnout Predictor</a>
+            <a class="navbar-brand" href="{{ url_for('core.dashboard') }}">Burnout Predictor</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a class="nav-link" href="{{ url_for('core.dashboard') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('ai_insights') }}">
+                        <a class="nav-link" href="{{ url_for('core.ai_insights') }}">
                             <i class="fas fa-brain"></i> AI Insights
                             <span class="badge bg-primary text-white">New</span>
                         </a>
@@ -39,19 +39,19 @@
                             <span>{{ session.get('user_email', 'User').split('@')[0] }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('dashboard') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('core.settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('core.dashboard') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                         </ul>
                     </li>
                     {% else %}
                     <!-- Login/Signup buttons when logged out -->
                     <li class="nav-item">
-                        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('login') }}">Login</a>
+                        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('auth.login') }}">Login</a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-primary btn-sm" href="{{ url_for('signup') }}">Sign Up</a>
+                        <a class="btn btn-primary btn-sm" href="{{ url_for('auth.signup') }}">Sign Up</a>
                     </li>
                     {% endif %}
                 </ul>

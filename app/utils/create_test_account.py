@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import Supabase client
-from supabase_client import (
+from app.database.supabase import (
     sign_up, save_daily_metrics, save_whoop_token
 )
 

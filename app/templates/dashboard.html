@@ -1,0 +1,1009 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Top Navigation Bar with Date Selector -->
+    <div class="date-nav-bar mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="nav-date-controls">
+                {% if has_prev %}
+                <a href="{{ url_for('core.dashboard', selected_date=prev_date) }}" class="btn btn-icon btn-light">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-icon btn-light" disabled>
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                {% endif %}
+                
+                <div class="date-picker-wrapper mx-2">
+                    <button id="date-picker-toggle" class="btn btn-outline-primary date-selector-btn">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <span id="current-date-display">
+                            {% if selected_date is string %}
+                                {{ selected_date }}
+                            {% else %}
+                                {{ selected_date.strftime('%b %d, %Y') }}
+                            {% endif %}
+                        </span>
+                        <i class="fas fa-caret-down ms-2"></i>
+                    </button>
+                    
+                    <!-- Calendar Popup (Hidden by Default) -->
+                    <div id="custom-calendar" class="custom-calendar-popup">
+                        <div class="calendar-header">
+                            <button id="prev-month" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                            <div id="month-year-display"></div>
+                            <button id="next-month" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-weekdays">
+                            <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                        </div>
+                        <div id="calendar-days" class="calendar-days"></div>
+                        <div class="calendar-footer">
+                            <div class="calendar-legend">
+                                <span class="legend-item"><span class="dot dot-green"></span> Low Risk</span>
+                                <span class="legend-item"><span class="dot dot-yellow"></span> Medium Risk</span>
+                                <span class="legend-item"><span class="dot dot-red"></span> High Risk</span>
+                                <span class="legend-item"><span class="dot dot-gray"></span> No Data</span>
+                            </div>
+                            <button id="go-to-today" class="btn btn-sm btn-outline-primary">Today</button>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if has_next %}
+                <a href="{{ url_for('core.dashboard', selected_date=next_date) }}" class="btn btn-icon btn-light">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-icon btn-light" disabled>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                {% endif %}
+                
+                <a href="{{ url_for('core.dashboard') }}" class="btn btn-light ms-2">
+                    <i class="fas fa-calendar-day me-1"></i> Today
+                </a>
+            </div>
+            
+            <!-- Right-side Actions -->
+            <div class="nav-actions">
+                {% if selected_record is mapping and selected_record.get('mood_rating') is not none or not selected_record is mapping and selected_record.mood_rating is not none %}
+                <div class="btn-group">
+                    <a href="{{ url_for('core.input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit me-1"></i> Update Mood
+                    </a>
+                </div>
+                {% else %}
+                <a href="{{ url_for('core.input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                   class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus-circle me-1"></i> Add Mood
+                </a>
+                {% endif %}
+                
+                <a href="{{ url_for('core.settings') }}" class="btn btn-light btn-sm ms-2">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if selected_record %}
+    <!-- Main Dashboard Content -->
+    <div class="row g-4">
+        <!-- Left Column - Key Metrics -->
+        <div class="col-lg-7">
+            <!-- Primary Metrics -->
+            <div class="metrics-grid mb-4">
+                <!-- Recovery Score -->
+                <div class="metric-card primary-metric" 
+                    {% if selected_record is mapping %}
+                        {% if selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 66 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 33 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.get('recovery_score') is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% else %}
+                        {% if selected_record.recovery_score is not none and selected_record.recovery_score > 66 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.recovery_score is not none and selected_record.recovery_score > 33 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.recovery_score is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% endif %}
+                >
+                    <div class="metric-header">
+                        <div class="metric-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <h3>Recovery</h3>
+                    </div>
+                    
+                    <div class="metric-value">
+                        {% if selected_record is mapping %}
+                            {{ selected_record.get('recovery_score')|round(1) if selected_record.get('recovery_score') is not none else "–" }}
+                        {% else %}
+                            {{ selected_record.recovery_score|round(1) if selected_record.recovery_score is not none else "–" }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="metric-label">
+                        {% if selected_record is mapping %}
+                            {% if selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 66 %}
+                                <span class="status-pill status-positive">Excellent</span>
+                            {% elif selected_record.get('recovery_score') is not none and selected_record.get('recovery_score') > 33 %}
+                                <span class="status-pill status-neutral">Moderate</span>
+                            {% elif selected_record.get('recovery_score') is not none %}
+                                <span class="status-pill status-negative">Low</span>
+                            {% endif %}
+                        {% else %}
+                            {% if selected_record.recovery_score is not none and selected_record.recovery_score > 66 %}
+                                <span class="status-pill status-positive">Excellent</span>
+                            {% elif selected_record.recovery_score is not none and selected_record.recovery_score > 33 %}
+                                <span class="status-pill status-neutral">Moderate</span>
+                            {% elif selected_record.recovery_score is not none %}
+                                <span class="status-pill status-negative">Low</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Mood Rating -->
+                <div class="metric-card primary-metric" 
+                    {% if selected_record is mapping %}
+                        {% if selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 6 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 3 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.get('mood_rating') is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% else %}
+                        {% if selected_record.mood_rating is not none and selected_record.mood_rating > 6 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.mood_rating is not none and selected_record.mood_rating > 3 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.mood_rating is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% endif %}
+                >
+                    <div class="metric-header">
+                        <div class="metric-icon">
+                            <i class="fas fa-smile"></i>
+                        </div>
+                        <h3>Mood</h3>
+                    </div>
+                    
+                    <div class="metric-value">
+                        {% if selected_record is mapping %}
+                            {% if selected_record.get('mood_rating') is not none %}
+                                {{ selected_record.get('mood_rating') }}<span class="metric-unit">/10</span>
+                            {% else %}
+                                <a href="{{ url_for('core.input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                   class="btn btn-primary btn-sm add-mood-btn">
+                                    <i class="fas fa-plus me-1"></i> Add
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            {% if selected_record.mood_rating is not none %}
+                                {{ selected_record.mood_rating }}<span class="metric-unit">/10</span>
+                            {% else %}
+                                <a href="{{ url_for('core.input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" 
+                                   class="btn btn-primary btn-sm add-mood-btn">
+                                    <i class="fas fa-plus me-1"></i> Add
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="metric-label">
+                        {% if selected_record is mapping %}
+                            {% if selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 6 %}
+                                <span class="status-pill status-positive">Good</span>
+                            {% elif selected_record.get('mood_rating') is not none and selected_record.get('mood_rating') > 3 %}
+                                <span class="status-pill status-neutral">Neutral</span>
+                            {% elif selected_record.get('mood_rating') is not none %}
+                                <span class="status-pill status-negative">Poor</span>
+                            {% endif %}
+                        {% else %}
+                            {% if selected_record.mood_rating is not none and selected_record.mood_rating > 6 %}
+                                <span class="status-pill status-positive">Good</span>
+                            {% elif selected_record.mood_rating is not none and selected_record.mood_rating > 3 %}
+                                <span class="status-pill status-neutral">Neutral</span>
+                            {% elif selected_record.mood_rating is not none %}
+                                <span class="status-pill status-negative">Poor</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Daily Strain -->
+                <div class="metric-card primary-metric" 
+                    {% if selected_record is mapping %}
+                        {% if selected_record.get('strain') is not none and selected_record.get('strain') < 9 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.get('strain') is not none and selected_record.get('strain') < 14 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.get('strain') is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% else %}
+                        {% if selected_record.strain is not none and selected_record.strain < 9 %}
+                            style="--metric-color: var(--bs-success);"
+                        {% elif selected_record.strain is not none and selected_record.strain < 14 %}
+                            style="--metric-color: var(--bs-warning);"
+                        {% elif selected_record.strain is not none %}
+                            style="--metric-color: var(--bs-danger);"
+                        {% endif %}
+                    {% endif %}
+                >
+                    <div class="metric-header">
+                        <div class="metric-icon">
+                            <i class="fas fa-running"></i>
+                        </div>
+                        <h3>Strain</h3>
+                    </div>
+                    
+                    <div class="metric-value">
+                        {% if selected_record is mapping %}
+                            {{ selected_record.get('strain')|round(1) if selected_record.get('strain') is not none else "–" }}<span class="metric-unit">/21</span>
+                        {% else %}
+                            {{ selected_record.strain|round(1) if selected_record.strain is not none else "–" }}<span class="metric-unit">/21</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="metric-label">
+                        {% if selected_record is mapping %}
+                            {% if selected_record.get('strain') is not none and selected_record.get('strain') < 9 %}
+                                <span class="status-pill status-positive">Light</span>
+                            {% elif selected_record.get('strain') is not none and selected_record.get('strain') < 14 %}
+                                <span class="status-pill status-neutral">Moderate</span>
+                            {% elif selected_record.get('strain') is not none and selected_record.get('strain') < 18 %}
+                                <span class="status-pill status-negative">High</span>
+                            {% elif selected_record.get('strain') is not none %}
+                                <span class="status-pill status-critical">Extreme</span>
+                            {% endif %}
+                        {% else %}
+                            {% if selected_record.strain is not none and selected_record.strain < 9 %}
+                                <span class="status-pill status-positive">Light</span>
+                            {% elif selected_record.strain is not none and selected_record.strain < 14 %}
+                                <span class="status-pill status-neutral">Moderate</span>
+                            {% elif selected_record.strain is not none and selected_record.strain < 18 %}
+                                <span class="status-pill status-negative">High</span>
+                            {% elif selected_record.strain is not none %}
+                                <span class="status-pill status-critical">Extreme</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Secondary Metrics Row -->
+            <div class="metrics-secondary mb-4">
+                <!-- HRV -->
+                <div class="secondary-metric">
+                    <div class="sm-label">HRV</div>
+                    <div class="sm-value">
+                        {% if selected_record is mapping %}
+                            {{ selected_record.get('hrv')|round(1) if selected_record.get('hrv') is not none else "–" }}
+                            {% if selected_record.get('hrv') is not none %}<span class="sm-unit">ms</span>{% endif %}
+                        {% else %}
+                            {{ selected_record.hrv|round(1) if selected_record.hrv is not none else "–" }}
+                            {% if selected_record.hrv is not none %}<span class="sm-unit">ms</span>{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Resting HR -->
+                <div class="secondary-metric">
+                    <div class="sm-label">Resting HR</div>
+                    <div class="sm-value">
+                        {% if selected_record is mapping %}
+                            {{ selected_record.get('resting_hr')|round if selected_record.get('resting_hr') is not none else "–" }}
+                            {% if selected_record.get('resting_hr') is not none %}<span class="sm-unit">bpm</span>{% endif %}
+                        {% else %}
+                            {{ selected_record.resting_hr|round if selected_record.resting_hr is not none else "–" }}
+                            {% if selected_record.resting_hr is not none %}<span class="sm-unit">bpm</span>{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Sleep Quality -->
+                <div class="secondary-metric">
+                    <div class="sm-label">Sleep Quality</div>
+                    <div class="sm-value">
+                        {% if selected_record is mapping %}
+                            {{ selected_record.get('sleep_quality')|round if selected_record.get('sleep_quality') is not none else "–" }}
+                            {% if selected_record.get('sleep_quality') is not none %}<span class="sm-unit">%</span>{% endif %}
+                        {% else %}
+                            {{ selected_record.sleep_quality|round if selected_record.sleep_quality is not none else "–" }}
+                            {% if selected_record.sleep_quality is not none %}<span class="sm-unit">%</span>{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Time Series Chart -->
+            <div class="dashboard-chart mb-4">
+                <div class="chart-header">
+                    <h2>Metrics Over Time</h2>
+                </div>
+                {% if time_series %}
+                <div id="time-series-chart" class="chart-container"></div>
+                {% else %}
+                <div class="no-data-container">
+                    <i class="fas fa-chart-line no-data-icon"></i>
+                    <p>Not enough data to display the chart.<br>Add mood data for multiple days to see trends.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Right Column - Burnout Risk & Insights -->
+        <div class="col-lg-5">
+            <!-- Burnout Risk Card -->
+            <div class="burnout-risk-card mb-4">
+                <div class="burnout-header">
+                    <div class="burnout-title">
+                        <h2>Burnout Risk</h2>
+                        <div class="tooltip-icon" data-bs-toggle="tooltip" data-bs-html="true" 
+                             title="<div class='p-2'>Calculated from your recovery scores, mood ratings, HRV, sleep quality, and strain-recovery balance over time</div>">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="risk-date">
+                        {% if selected_date is string %}
+                            {{ selected_date }}
+                        {% else %}
+                            {{ selected_date.strftime('%A, %B %d, %Y') }}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="risk-gauge-container">
+                    <div class="risk-gauge 
+                        {% if burnout_risk is not none and burnout_risk < 33 %}risk-low
+                        {% elif burnout_risk is not none and burnout_risk < 66 %}risk-medium
+                        {% elif burnout_risk is not none %}risk-high
+                        {% endif %}"
+                        {% if burnout_risk is not none %}
+                        style="--risk-percentage: {{ burnout_risk }}%"
+                        {% endif %}
+                    >
+                        <div class="risk-value">{{ burnout_risk|round if burnout_risk is not none else "–" }}%</div>
+                        <div class="risk-level">
+                            {% if burnout_risk is not none and burnout_risk < 33 %}
+                            Low Risk
+                            {% elif burnout_risk is not none and burnout_risk < 66 %}
+                            Moderate Risk
+                            {% elif burnout_risk is not none %}
+                            High Risk
+                            {% else %}
+                            No Data
+                            {% endif %}
+                        </div>
+                        
+                        {% if selected_record is mapping and selected_record.get('burnout_trend') or not selected_record is mapping and selected_record.burnout_trend %}
+                            {% if selected_record is mapping %}
+                                {% if selected_record.get('burnout_trend') > 5 %}
+                                <div class="risk-trend negative"><i class="fas fa-arrow-up"></i> Increasing</div>
+                                {% elif selected_record.get('burnout_trend') < -5 %}
+                                <div class="risk-trend positive"><i class="fas fa-arrow-down"></i> Decreasing</div>
+                                {% endif %}
+                            {% else %}
+                                {% if selected_record.burnout_trend > 5 %}
+                                <div class="risk-trend negative"><i class="fas fa-arrow-up"></i> Increasing</div>
+                                {% elif selected_record.burnout_trend < -5 %}
+                                <div class="risk-trend positive"><i class="fas fa-arrow-down"></i> Decreasing</div>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="risk-breakdown">
+                    <h3>Risk Factors</h3>
+                    <div class="risk-factor-grid">
+                        <div class="risk-factor">
+                            <div class="rf-label">Recovery</div>
+                            <div class="rf-bar-container">
+                                <div class="rf-bar" style="width: 25%"></div>
+                                <div class="rf-value">25%</div>
+                            </div>
+                        </div>
+                        <div class="risk-factor">
+                            <div class="rf-label">Mood</div>
+                            <div class="rf-bar-container">
+                                <div class="rf-bar" style="width: 30%"></div>
+                                <div class="rf-value">30%</div>
+                            </div>
+                        </div>
+                        <div class="risk-factor">
+                            <div class="rf-label">HRV</div>
+                            <div class="rf-bar-container">
+                                <div class="rf-bar" style="width: 15%"></div>
+                                <div class="rf-value">15%</div>
+                            </div>
+                        </div>
+                        <div class="risk-factor">
+                            <div class="rf-label">Sleep</div>
+                            <div class="rf-bar-container">
+                                <div class="rf-bar" style="width: 15%"></div>
+                                <div class="rf-value">15%</div>
+                            </div>
+                        </div>
+                        <div class="risk-factor">
+                            <div class="rf-label">Strain Balance</div>
+                            <div class="rf-bar-container">
+                                <div class="rf-bar" style="width: 15%"></div>
+                                <div class="rf-value">15%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Insights Card -->
+            <div class="insights-card mb-4">
+                <div class="insights-header">
+                    <h2><i class="fas fa-brain me-2"></i> AI Insights</h2>
+                    <div class="new-badge">New</div>
+                </div>
+                
+                <div id="ai-insights-preview">
+                    <p class="insights-intro">Get personalized analysis and recommendations based on your health metrics.</p>
+                    
+                    <div class="insights-actions mb-3">
+                        <button id="load-insights-btn" class="btn btn-primary w-100">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <span id="insights-btn-text">Generate Personalized Insights</span>
+                        </button>
+                    </div>
+                    
+                    <div id="insights-content" class="mt-3" style="display: none;">
+                        <div id="loading-insights" class="insights-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Analyzing your data...</p>
+                        </div>
+                        <div id="insights-result" class="insights-result"></div>
+                    </div>
+                    
+                    <div class="insights-footer">
+                        <a href="{{ url_for('core.ai_insights') }}" class="btn btn-outline-primary btn-sm">
+                            Advanced Analysis <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Data Card -->
+            <div class="recent-data-card">
+                <div class="recent-data-header">
+                    <h2>Recent History</h2>
+                    <div class="filter-dropdown">
+                        <button class="btn btn-sm btn-light">
+                            Last 7 days <i class="fas fa-caret-down ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="data-timeline">
+                    {% for record in records[:7] %}
+                    <div class="timeline-item">
+                        <div class="ti-date">
+                            {% if record.date is string %}
+                                {{ record.date }}
+                            {% else %}
+                                {{ record.date.strftime('%a, %b %d') }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="ti-metrics">
+                            <div class="ti-metric">
+                                <span class="ti-label">Recovery</span>
+                                <span class="ti-value 
+                                    {% if record is mapping and record.get('recovery_score') is not none %}
+                                        {% if record.get('recovery_score') > 66 %}text-success
+                                        {% elif record.get('recovery_score') > 33 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% elif not record is mapping and record.recovery_score is not none %}
+                                        {% if record.recovery_score > 66 %}text-success
+                                        {% elif record.recovery_score > 33 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% endif %}">
+                                    {% if record is mapping %}
+                                        {{ record.get('recovery_score')|round if record.get('recovery_score') is not none else "–" }}
+                                    {% else %}
+                                        {{ record.recovery_score|round if record.recovery_score is not none else "–" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="ti-metric">
+                                <span class="ti-label">Mood</span>
+                                <span class="ti-value
+                                    {% if record is mapping and record.get('mood_rating') is not none %}
+                                        {% if record.get('mood_rating') > 6 %}text-success
+                                        {% elif record.get('mood_rating') > 3 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% elif not record is mapping and record.mood_rating is not none %}
+                                        {% if record.mood_rating > 6 %}text-success
+                                        {% elif record.mood_rating > 3 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% endif %}">
+                                    {% if record is mapping %}
+                                        {{ record.get('mood_rating') if record.get('mood_rating') is not none else "–" }}
+                                    {% else %}
+                                        {{ record.mood_rating if record.mood_rating is not none else "–" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="ti-metric">
+                                <span class="ti-label">Risk</span>
+                                <span class="ti-value
+                                    {% if record is mapping and record.get('burnout_current') is not none %}
+                                        {% if record.get('burnout_current') < 33 %}text-success
+                                        {% elif record.get('burnout_current') < 66 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% elif not record is mapping and record.burnout_current is not none %}
+                                        {% if record.burnout_current < 33 %}text-success
+                                        {% elif record.burnout_current < 66 %}text-warning
+                                        {% else %}text-danger{% endif %}
+                                    {% endif %}">
+                                    {% if record is mapping %}
+                                        {{ record.get('burnout_current')|round if record.get('burnout_current') is not none else "–" }}%
+                                    {% else %}
+                                        {{ record.burnout_current|round if record.burnout_current is not none else "–" }}%
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="ti-link">
+                            {% if record.date is string %}
+                                <a href="{{ url_for('core.dashboard', selected_date=record.date) }}" class="ti-view-btn">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('core.dashboard', selected_date=record.date.strftime('%Y-%m-%d')) }}" class="ti-view-btn">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- No Data State -->
+    <div class="no-data-page">
+        <div class="no-data-content">
+            <div class="no-data-icon">
+                <i class="fas fa-chart-area"></i>
+            </div>
+            <h2>No data available for 
+                {% if selected_date is string %}
+                    {{ selected_date }}
+                {% else %}
+                    {{ selected_date.strftime('%A, %B %d, %Y') }}
+                {% endif %}
+            </h2>
+            <p>Start tracking your health metrics to monitor burnout risk.</p>
+            <div class="no-data-actions">
+                <a href="{{ url_for('core.input_mood', input_date=selected_date.strftime('%Y-%m-%d') if not selected_date is string else selected_date) }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i> Add Mood for This Day
+                </a>
+                <a href="{{ url_for('core.settings') }}" class="btn btn-light">
+                    <i class="fas fa-cog me-1"></i> Settings
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Browser detection to help with debugging
+    function detectBrowser() {
+        const userAgent = navigator.userAgent;
+        let browserName;
+        
+        if (userAgent.match(/chrome|chromium|crios/i)) {
+            browserName = "Chrome";
+        } else if (userAgent.match(/firefox|fxios/i)) {
+            browserName = "Firefox";
+        } else if (userAgent.match(/safari/i)) {
+            browserName = "Safari";
+        } else if (userAgent.match(/opr\//i)) {
+            browserName = "Opera";
+        } else if (userAgent.match(/edg/i)) {
+            browserName = "Edge";
+        } else {
+            browserName = "Unknown";
+        }
+        
+        return browserName;
+    }
+    
+    // Log browser information to help with debugging
+    console.log("Browser: " + detectBrowser());
+    console.log("User Agent: " + navigator.userAgent);
+    
+    // Main document ready handler - contains all JavaScript initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        
+        // AI Insights handler
+        const loadInsightsBtn = document.getElementById('load-insights-btn');
+        const insightsContent = document.getElementById('insights-content');
+        const loadingInsights = document.getElementById('loading-insights');
+        const insightsResult = document.getElementById('insights-result');
+        const insightsBtnText = document.getElementById('insights-btn-text');
+        
+        if (loadInsightsBtn) {
+            loadInsightsBtn.addEventListener('click', function() {
+                // Show the insights section and loading spinner
+                insightsContent.style.display = 'block';
+                loadingInsights.style.display = 'flex';
+                insightsResult.style.display = 'none';
+                insightsBtnText.textContent = 'Analyzing...';
+                loadInsightsBtn.disabled = true;
+                
+                // Make AJAX request to get insights
+                fetch('/api/insights', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading spinner
+                    loadingInsights.style.display = 'none';
+                    
+                    // Show results
+                    console.log("API response:", data); // Debug: Log the response for browser console
+                    
+                    if (data.success) {
+                        try {
+                            // Parse markdown content
+                            const htmlContent = marked.parse(data.insight);
+                            insightsResult.innerHTML = htmlContent;
+                            insightsResult.style.display = 'block';
+                            insightsBtnText.textContent = 'Refresh Insights';
+                        } catch (parseError) {
+                            console.error("Error parsing markdown:", parseError);
+                            // Fallback to raw display in case of parsing error
+                            insightsResult.innerHTML = `<div class="p-3"><pre>${data.insight}</pre></div>`;
+                            insightsResult.style.display = 'block';
+                            insightsBtnText.textContent = 'Refresh Insights';
+                        }
+                    } else {
+                        console.warn("API error:", data.error);
+                        insightsResult.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${data.error || 'Could not generate insights'}
+                            </div>
+                        `;
+                        insightsResult.style.display = 'block';
+                        insightsBtnText.textContent = 'Try Again';
+                    }
+                    
+                    // Re-enable button
+                    loadInsightsBtn.disabled = false;
+                })
+                .catch(error => {
+                    // Handle errors
+                    loadingInsights.style.display = 'none';
+                    insightsResult.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error: ${error.message || 'Something went wrong'}
+                        </div>
+                    `;
+                    insightsResult.style.display = 'block';
+                    loadInsightsBtn.disabled = false;
+                    insightsBtnText.textContent = 'Try Again';
+                });
+            });
+        }
+    
+        // Time Series Chart Initialization
+        {% if time_series %}
+        try {
+            const actualData = {{ time_series|safe }};
+            if (actualData && actualData.data && actualData.layout) {
+                // Force all traces to be visible
+                if (Array.isArray(actualData.data)) {
+                    actualData.data.forEach(trace => {
+                        trace.visible = true;
+                    });
+                }
+                
+                // Customize the layout for a more modern look
+                if (actualData.layout) {
+                    // Update layout
+                    actualData.layout.paper_bgcolor = 'rgba(255,255,255,0)';
+                    actualData.layout.plot_bgcolor = 'rgba(255,255,255,0)';
+                    actualData.layout.margin = {t: 30, b: 40, l: 60, r: 60};
+                    actualData.layout.font = {family: 'Inter, system-ui, sans-serif'};
+                    actualData.layout.title = '';  // Remove title, we have it in the card header
+                    
+                    // Update axes
+                    if (actualData.layout.yaxis) {
+                        actualData.layout.yaxis.gridcolor = 'rgba(0,0,0,0.05)';
+                        actualData.layout.yaxis.title = null;
+                    }
+                    
+                    if (actualData.layout.xaxis) {
+                        actualData.layout.xaxis.gridcolor = 'rgba(0,0,0,0.05)';
+                    }
+                    
+                    // Enable secondary y-axis explicitly
+                    if (!actualData.layout.yaxis2) {
+                        actualData.layout.yaxis2 = {
+                            title: "Strain (0-21)",
+                            range: [0, 21],
+                            overlaying: "y",
+                            side: "right",
+                            gridcolor: 'rgba(0,0,0,0.0)',
+                            tickfont: {color: 'rgba(128,0,128,0.8)'},
+                        };
+                    }
+                }
+                
+                Plotly.newPlot('time-series-chart', actualData.data, actualData.layout, {responsive: true});
+            }
+        } catch (err) {
+            console.error("Error plotting time series chart:", err);
+            document.getElementById('time-series-chart').innerHTML = `
+                <div class="chart-error">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading chart</p>
+                </div>`;
+        }
+        {% endif %}
+        
+        // Custom Calendar Implementation
+        const datePickerToggle = document.getElementById('date-picker-toggle');
+        const calendarPopup = document.getElementById('custom-calendar');
+        const daysContainer = document.getElementById('calendar-days');
+        const monthYearDisplay = document.getElementById('month-year-display');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        const goToTodayBtn = document.getElementById('go-to-today');
+        const currentDateDisplay = document.getElementById('current-date-display');
+        
+        // Calendar state
+        let currentMonth;
+        let currentYear;
+        let selectedDate;
+        let calendarData = {};
+        
+        // Initialize with the selected date
+        const selectedDateStr = "{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}";
+        selectedDate = new Date(selectedDateStr);
+        currentMonth = selectedDate.getMonth();
+        currentYear = selectedDate.getFullYear();
+        
+        // Toggle calendar visibility - with improved event handling
+        datePickerToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Force toggle instead of checking current state
+            if (calendarPopup.style.display === 'block') {
+                hideCalendar();
+            } else {
+                showCalendar();
+            }
+        });
+        
+        // Function to show calendar
+        function showCalendar() {
+            // Set display explicitly
+            calendarPopup.style.display = 'block';
+            
+            // Render and fetch data
+            renderCalendar(currentMonth, currentYear);
+            fetchCalendarData(currentYear, currentMonth + 1);
+            
+            // Add outside click handler with a slight delay to avoid immediate triggering
+            setTimeout(() => {
+                document.addEventListener('click', closeCalendarOnClickOutside);
+            }, 100);
+        }
+        
+        // Function to hide calendar
+        function hideCalendar() {
+            calendarPopup.style.display = 'none';
+            document.removeEventListener('click', closeCalendarOnClickOutside);
+        }
+        
+        // Function to handle clicks outside the calendar
+        function closeCalendarOnClickOutside(e) {
+            if (!calendarPopup.contains(e.target) && !datePickerToggle.contains(e.target)) {
+                hideCalendar();
+            }
+        }
+        
+        // Navigation buttons
+        prevMonthBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar(currentMonth, currentYear);
+            fetchCalendarData(currentYear, currentMonth + 1);
+        });
+        
+        nextMonthBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar(currentMonth, currentYear);
+            fetchCalendarData(currentYear, currentMonth + 1);
+        });
+        
+        goToTodayBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const today = new Date();
+            currentMonth = today.getMonth();
+            currentYear = today.getFullYear();
+            renderCalendar(currentMonth, currentYear);
+            fetchCalendarData(currentYear, currentMonth + 1);
+        });
+        
+        // Fetch calendar data from the API
+        function fetchCalendarData(year, month) {
+            const url = `/calendar_data/${year}/${month}`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Store data indexed by date
+                    calendarData = {};
+                    data.forEach(item => {
+                        calendarData[item.date] = item;
+                    });
+                    // Update calendar with risk levels
+                    updateCalendarRiskLevels();
+                })
+                .catch(error => console.error('Error fetching calendar data:', error));
+        }
+        
+        // Update calendar days with risk levels
+        function updateCalendarRiskLevels() {
+            const dayElements = document.querySelectorAll('.calendar-day');
+            dayElements.forEach(dayEl => {
+                const dateStr = dayEl.dataset.date;
+                if (dateStr && calendarData[dateStr]) {
+                    const data = calendarData[dateStr];
+                    
+                    // Remove any existing risk classes
+                    dayEl.classList.remove('calendar-day-risk-low', 'calendar-day-risk-medium', 'calendar-day-risk-high');
+                    
+                    // Add appropriate risk class
+                    if (data.risk_level === 'low') {
+                        dayEl.classList.add('calendar-day-risk-low');
+                    } else if (data.risk_level === 'medium') {
+                        dayEl.classList.add('calendar-day-risk-medium');
+                    } else if (data.risk_level === 'high') {
+                        dayEl.classList.add('calendar-day-risk-high');
+                    }
+                    
+                    // Mark as having data
+                    dayEl.classList.add('calendar-day-with-data');
+                    
+                    // Add tooltip with detailed info
+                    let tooltipContent = `Date: ${dateStr}\n`;
+                    if (data.burnout_risk !== null) tooltipContent += `Burnout Risk: ${data.burnout_risk.toFixed(1)}%\n`;
+                    if (data.recovery_score !== null) tooltipContent += `Recovery: ${data.recovery_score.toFixed(1)}\n`;
+                    if (data.mood_rating !== null) tooltipContent += `Mood: ${data.mood_rating}/10\n`;
+                    
+                    dayEl.title = tooltipContent;
+                }
+            });
+        }
+        
+        // Render calendar for a specific month/year
+        function renderCalendar(month, year) {
+            // Update header
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            monthYearDisplay.textContent = `${monthNames[month]} ${year}`;
+            
+            // Clear previous days
+            daysContainer.innerHTML = '';
+            
+            // Get the first day of the month
+            const firstDay = new Date(year, month, 1).getDay();
+            
+            // Get the number of days in the month
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Create padding for first week
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.classList.add('calendar-day', 'calendar-day-disabled');
+                daysContainer.appendChild(emptyDay);
+            }
+            
+            // Create days of the month
+            const today = new Date();
+            const currentDate = new Date();
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('calendar-day');
+                dayElement.textContent = day;
+                
+                // Create date string for this day
+                const dateObj = new Date(year, month, day);
+                const dateStr = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+                dayElement.dataset.date = dateStr;
+                
+                // Mark today
+                if (dateObj.getDate() === today.getDate() && 
+                    dateObj.getMonth() === today.getMonth() && 
+                    dateObj.getFullYear() === today.getFullYear()) {
+                    dayElement.classList.add('calendar-day-today');
+                }
+                
+                // Mark selected date
+                if (dateObj.getDate() === selectedDate.getDate() && 
+                    dateObj.getMonth() === selectedDate.getMonth() && 
+                    dateObj.getFullYear() === selectedDate.getFullYear()) {
+                    dayElement.classList.add('calendar-day-selected');
+                }
+                
+                // Disable future dates
+                if (dateObj > currentDate) {
+                    dayElement.classList.add('calendar-day-disabled');
+                } else {
+                    // Improved click handler for valid dates
+                    dayElement.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Show loading state
+                        this.classList.add('calendar-day-loading');
+                        
+                        // Navigate to the date
+                        const targetUrl = "{{ url_for('core.dashboard') }}/" + dateStr;
+                        window.location.href = targetUrl;
+                    });
+                }
+                
+                daysContainer.appendChild(dayElement);
+            }
+        }
+    });
+</script>
+{% endblock %}

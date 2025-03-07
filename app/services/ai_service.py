@@ -7,15 +7,15 @@ import os
 import json
 import logging
 from datetime import datetime, timedelta
-import requests
+from openai import OpenAI
 from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+# Load environment variables with override to ensure .env values take precedence
+load_dotenv(override=True)
 
 class BurnoutInsightsEngine:
     """
@@ -25,15 +25,28 @@ class BurnoutInsightsEngine:
     
     def __init__(self, api_key=None):
         """Initialize the insights engine with OpenAI API key."""
-        # Get API key from param or env, and clean it
-        raw_key = api_key or os.getenv("OPENAI_API_KEY", "")
-        self.api_key = raw_key.strip().strip('"\'') if raw_key else None
+        # Get OpenAI API key from parameter or environment
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         
-        if not self.api_key:
-            logger.warning("No OpenAI API key provided. AI insights will not be available.")
+        # Log API key status (not the actual key)
+        if self.api_key:
+            logger.info(f"API key present with length: {len(self.api_key)}")
+            if len(self.api_key) > 10:
+                logger.info(f"API key starts with: {self.api_key[:5]}... and ends with: ...{self.api_key[-5:]}")
         else:
-            logger.info(f"Using OpenAI API key: {self.api_key[:4]}...{self.api_key[-4:] if len(self.api_key) > 8 else ''}")
-        self.api_url = "https://api.openai.com/v1/chat/completions"
+            logger.warning("No OpenAI API key provided. AI insights will not be available.")
+        
+        # Initialize OpenAI client
+        try:
+            self.client = OpenAI(api_key=self.api_key)
+            logger.info("OpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            self.client = None
+            
+        # Get model preference (default to GPT-4o mini which is cheaper but powerful)
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        logger.info(f"Using model: {self.model}")
     
     def _prepare_metrics_context(self, metrics_data, days=7):
         """
@@ -160,10 +173,11 @@ class BurnoutInsightsEngine:
         Returns:
             dict: Response with insight text and metadata
         """
-        if not self.api_key or not metrics_data:
+        if not self.client or not metrics_data:
             return {
-                "error": "Missing API key or data",
-                "insight": "AI insights unavailable. Please check your configuration."
+                "success": False,
+                "error": "Missing OpenAI client or data",
+                "insight": "AI insights unavailable. Please check your OpenAI API key in Settings."
             }
         
         try:
@@ -196,85 +210,43 @@ Keep your entire response under 350 words, prioritizing specificity and relevanc
                 {"role": "user", "content": f"Here's my health data:\n\n{metrics_context}\n{trends_context}\n\nMy question: {query}"}
             ]
             
-            # Call the OpenAI API
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            }
-            
-            # Get the model preference (default to gpt-4-turbo-preview)
-            model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
-            
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 800
-            }
+            logger.info(f"Making API request with model: {self.model}")
             
             try:
-                logger.info(f"Making API request to {self.api_url} with model: {payload['model']}")
-                
-                # Debug the request being sent
-                debug_payload = payload.copy()
-                if 'messages' in debug_payload:
-                    # Just show the structure without the full content
-                    debug_payload['messages'] = f"[{len(debug_payload['messages'])} messages]"
-                logger.info(f"Request payload: {debug_payload}")
-                
-                response = requests.post(
-                    self.api_url,
-                    headers=headers,
-                    json=payload,  # Use json parameter instead of data
-                    timeout=30  # Add timeout to prevent hanging requests
+                # Use the OpenAI client to create a chat completion
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=800
                 )
                 
-                # Log response status
-                logger.info(f"API response status: {response.status_code}")
+                logger.info("API request successful")
                 
-                # Check if the request was successful
-                response.raise_for_status()
-                response_data = response.json()
+                # Extract the response content
+                insight_text = completion.choices[0].message.content
                 
-                # Log a snippet of the response
-                logger.info(f"API response received successfully")
-                
-            except requests.exceptions.RequestException as e:
-                logger.error(f"API request error: {str(e)}")
-                
-                # Get more details from the response if available
-                error_detail = ""
-                try:
-                    if hasattr(e, 'response') and e.response is not None:
-                        error_json = e.response.json()
-                        error_detail = f" - {error_json.get('error', {}).get('message', '')}"
-                except:
-                    pass
-                
-                return {
-                    "success": False,
-                    "error": f"OpenAI API key error: {str(e)}{error_detail}",
-                    "insight": "There was an issue with your OpenAI API key. Check if it's valid and has sufficient credits, then update it in Settings."
-                }
-            
-            # Extract the AI's reply
-            if "choices" in response_data and len(response_data["choices"]) > 0:
-                insight_text = response_data["choices"][0]["message"]["content"]
+                # Return successful response
                 return {
                     "success": True,
                     "insight": insight_text,
                     "timestamp": datetime.now().isoformat()
                 }
-            else:
-                logger.error(f"API Error: {response_data}")
+                
+            except Exception as e:
+                logger.error(f"API request error: {str(e)}")
+                
+                # Return error response
                 return {
-                    "error": "Failed to generate insights",
-                    "insight": "Sorry, I couldn't analyze your data at this time."
+                    "success": False,
+                    "error": f"OpenAI API error: {str(e)}",
+                    "insight": "There was an issue communicating with the AI service. Please check your API key in Settings or try again later."
                 }
-        
+            
         except Exception as e:
             logger.error(f"Error generating insight: {str(e)}")
             return {
+                "success": False,
                 "error": str(e),
                 "insight": "An error occurred while generating insights."
             }
@@ -294,7 +266,7 @@ Keep your entire response under 350 words, prioritizing specificity and relevanc
 
 
 # Create a singleton instance
-insights_engine = BurnoutInsightsEngine()
+insights_engine = None
 
 def get_burnout_insights(metrics_data, query=None):
     """
@@ -309,21 +281,12 @@ def get_burnout_insights(metrics_data, query=None):
     """
     global insights_engine
     
-    # Reload env variables to ensure we have the latest
-    load_dotenv(override=True)
+    # Create insights engine if it doesn't exist
+    if insights_engine is None:
+        logger.info("Initializing insights engine")
+        insights_engine = BurnoutInsightsEngine()
     
-    # Set the API key if it's in the environment
-    api_key = os.getenv("OPENAI_API_KEY", "")
-    
-    # Remove any quotes from the API key if present (common in .env files)
-    if api_key:
-        api_key = api_key.strip().strip('"\'')
-        
-    if api_key:
-        logger.info(f"Found API key in environment: {api_key[:5]}...{api_key[-5:] if len(api_key) > 10 else ''}")
-        # Re-initialize insights engine with clean API key
-        insights_engine = BurnoutInsightsEngine(api_key)
-    
+    # Return insights
     return insights_engine.generate_insight(metrics_data, query)
 
 

@@ -11,12 +11,12 @@ load_dotenv()
 
 # Try to import from Supabase client first, falling back to SQLite if not available
 try:
-    from supabase_client import get_whoop_token, save_whoop_token
+    from app.database.supabase import get_whoop_token, save_whoop_token
     USE_SUPABASE = True
     print("Using Supabase for token storage")
 except ImportError:
     # Import database functions for SQLite storage
-    from database import get_user_token, save_user_token
+    from app.database.sqlite import get_user_token, save_user_token
     USE_SUPABASE = False
     print("Using SQLite for token storage")
 
@@ -441,6 +441,44 @@ def get_all_daily_metrics(date_str=None, username="default"):
     combined_data.update({k: v for k, v in workout_data.items() if k != "date"})
     
     return combined_data
+
+def fetch_and_store_whoop_data():
+    """
+    Background task to fetch Whoop data and store it in the database.
+    Used by the scheduler to automatically update data daily.
+    """
+    import os
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    today_str = datetime.today().strftime("%Y-%m-%d")
+    
+    # For demo purposes, use admin user from env
+    # In a production multi-user environment, this would need to iterate through all users
+    user_id = os.getenv("SUPABASE_USER_ID")
+    if not user_id:
+        logger.error("No admin user ID set, cannot fetch data")
+        return
+    
+    try:
+        # Get metrics using Whoop API
+        metrics = get_all_daily_metrics(today_str, user_id)
+        
+        if metrics and any(v is not None for k, v in metrics.items() if k != 'date'):
+            # Store in database
+            if USE_SUPABASE:
+                from app.database.supabase import save_daily_metrics
+                save_daily_metrics(user_id, metrics)
+            else:
+                from app.database.sqlite import add_or_update_daily_metrics
+                add_or_update_daily_metrics(metrics)
+                
+            logger.info(f"Successfully updated metrics for {today_str}")
+        else:
+            logger.warning(f"No metrics data available for {today_str}")
+    except Exception as e:
+        logger.error(f"Error fetching/storing Whoop data: {str(e)}")
+
 
 if __name__ == "__main__":
     # Test the API functions

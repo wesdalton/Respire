@@ -5,10 +5,14 @@ This script should be run once when setting up Supabase integration.
 
 import os
 from dotenv import load_dotenv
-from supabase_client import (
+from app.database.supabase import (
     init_supabase_tables, sign_up, save_whoop_token, 
     save_daily_metrics, get_service_client
 )
+# Temporarily use old database.py for migration only
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from database import session, User, DailyMetrics, get_user_token
 import uuid
 

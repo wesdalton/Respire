@@ -1,0 +1,291 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Settings</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#account-section" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-user-circle me-2"></i> Account
+                </a>
+                <a href="#integrations-section" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+                    <i class="fas fa-plug me-2"></i> Integrations
+                </a>
+                <a href="#notifications-section" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-bell me-2"></i> Notifications
+                </a>
+                <a href="#appearance-section" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-palette me-2"></i> Appearance
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- Account Settings Section -->
+            <div class="tab-pane fade" id="account-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Account Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('core.update_account') }}">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ session.get('user_email', '') }}" readonly>
+                                <div class="form-text">Your email address cannot be changed.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Update Password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Integrations Section -->
+            <div class="tab-pane fade show active" id="integrations-section">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">WHOOP Integration</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if whoop_authenticated %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i> Connected to WHOOP
+                        </div>
+                        <p>Your WHOOP account is connected. We are automatically syncing your recovery, strain, and sleep data.</p>
+                        
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6>Last Synced Data:</h6>
+                                <ul class="mb-0">
+                                    <li>Recovery Score</li>
+                                    <li>Heart Rate Variability (HRV)</li>
+                                    <li>Resting Heart Rate</li>
+                                    <li>Strain</li>
+                                    <li>Sleep Quality</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex">
+                            <a href="{{ url_for('core.manual_fetch_data') }}" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-sync me-1"></i> Sync Now
+                            </a>
+                            <form method="post" action="{{ url_for('core.disconnect_whoop') }}">
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="fas fa-unlink me-1"></i> Disconnect
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Not connected to WHOOP
+                        </div>
+                        <p>Connect your WHOOP account to automatically sync your recovery, strain, and sleep data.</p>
+                        <a href="{{ url_for('core.auth') }}" class="btn btn-primary">
+                            <i class="fas fa-plug me-1"></i> Connect to WHOOP
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">AI Insights Integration</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('core.update_openai_key') }}">
+                            <div class="mb-3">
+                                <label for="openai_api_key" class="form-label">OpenAI API Key</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" 
+                                        value="{{ openai_key if openai_key else '' }}" 
+                                        placeholder="sk-...">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggle-api-key">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Enter your OpenAI API key to enable AI-powered insights. 
+                                    <a href="https://platform.openai.com/" target="_blank">Get an API key <i class="fas fa-external-link-alt"></i></a>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">AI Model</label>
+                                <select class="form-select" name="ai_model">
+                                    <option value="gpt-4-turbo-preview" {{ 'selected' if ai_model == 'gpt-4-turbo-preview' else '' }}>GPT-4 Turbo (Recommended)</option>
+                                    <option value="gpt-3.5-turbo" {{ 'selected' if ai_model == 'gpt-3.5-turbo' else '' }}>GPT-3.5 Turbo (Faster, less accurate)</option>
+                                </select>
+                                <div class="form-text">Select which AI model to use for generating insights.</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save AI Settings</button>
+                        </form>
+                        
+                        {% if openai_key %}
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-check-circle me-2"></i> AI Insights are enabled
+                        </div>
+                        <p>You can access personalized AI-powered insights about your health metrics from the dashboard or the AI Insights page.</p>
+                        {% else %}
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i> AI Insights are not enabled
+                        </div>
+                        <p>Add your OpenAI API key to enable personalized AI insights about your health metrics.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications Section -->
+            <div class="tab-pane fade" id="notifications-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Notification Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('core.update_notifications') }}">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" {{ 'checked' if notification_settings.get('email_notifications', False) else '' }}>
+                                <label class="form-check-label" for="email_notifications">Email Notifications</label>
+                                <div class="form-text">Receive email updates about your burnout risk.</div>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="high_risk_alerts" name="high_risk_alerts" {{ 'checked' if notification_settings.get('high_risk_alerts', False) else '' }}>
+                                <label class="form-check-label" for="high_risk_alerts">High Risk Alerts</label>
+                                <div class="form-text">Get alerts when your burnout risk is high.</div>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="weekly_summary" name="weekly_summary" {{ 'checked' if notification_settings.get('weekly_summary', False) else '' }}>
+                                <label class="form-check-label" for="weekly_summary">Weekly Summary</label>
+                                <div class="form-text">Receive a weekly summary of your metrics and burnout risk.</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Appearance Section -->
+            <div class="tab-pane fade" id="appearance-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Appearance Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('core.update_appearance') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Theme</label>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-check theme-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme-light" value="light" {{ 'checked' if appearance_settings.get('theme') == 'light' else '' }}>
+                                            <label class="form-check-label p-2 border rounded d-block" for="theme-light">
+                                                <div class="theme-preview light-theme">
+                                                    <div class="theme-header"></div>
+                                                    <div class="theme-body">
+                                                        <div class="theme-item"></div>
+                                                        <div class="theme-item"></div>
+                                                    </div>
+                                                </div>
+                                                Light
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check theme-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme-dark" value="dark" {{ 'checked' if appearance_settings.get('theme') == 'dark' else '' }}>
+                                            <label class="form-check-label p-2 border rounded d-block" for="theme-dark">
+                                                <div class="theme-preview dark-theme">
+                                                    <div class="theme-header"></div>
+                                                    <div class="theme-body">
+                                                        <div class="theme-item"></div>
+                                                        <div class="theme-item"></div>
+                                                    </div>
+                                                </div>
+                                                Dark
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check theme-check">
+                                            <input class="form-check-input" type="radio" name="theme" id="theme-system" value="system" {{ 'checked' if appearance_settings.get('theme') == 'system' or not appearance_settings.get('theme') else '' }}>
+                                            <label class="form-check-label p-2 border rounded d-block" for="theme-system">
+                                                <div class="theme-preview system-theme">
+                                                    <div class="theme-header"></div>
+                                                    <div class="theme-body">
+                                                        <div class="theme-item"></div>
+                                                        <div class="theme-item"></div>
+                                                    </div>
+                                                </div>
+                                                System
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="chart_type" class="form-label">Default Chart Type</label>
+                                <select class="form-select" id="chart_type" name="chart_type">
+                                    <option value="time_series" {{ 'selected' if appearance_settings.get('chart_type') == 'time_series' or not appearance_settings.get('chart_type') else '' }}>Time Series</option>
+                                    <option value="correlation" {{ 'selected' if appearance_settings.get('chart_type') == 'correlation' else '' }}>Correlation Plot</option>
+                                    <option value="burnout_focus" {{ 'selected' if appearance_settings.get('chart_type') == 'burnout_focus' else '' }}>Burnout Focus</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save Appearance Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle API key visibility
+    const toggleApiKeyBtn = document.getElementById('toggle-api-key');
+    const apiKeyInput = document.getElementById('openai_api_key');
+    
+    if (toggleApiKeyBtn && apiKeyInput) {
+        toggleApiKeyBtn.addEventListener('click', function() {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleApiKeyBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleApiKeyBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

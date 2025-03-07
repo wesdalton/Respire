@@ -6,7 +6,7 @@
         <div class="col-12">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.dashboard') }}">Dashboard</a></li>
                     <li class="breadcrumb-item active">Mood Input</li>
                 </ol>
             </nav>
@@ -26,7 +26,7 @@
                     <span class="text-muted">{{ mood_date.strftime('%A, %B %d, %Y') }}</span>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ url_for('input_mood', input_date=date_str) }}" id="mood-form">
+                    <form method="post" action="{{ url_for('core.input_mood', input_date=date_str) }}" id="mood-form">
                         <input type="hidden" name="date" value="{{ date_str }}">
                         
                         <!-- Emoji Mood Selector -->
@@ -82,7 +82,7 @@
                         </div>
                         
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ url_for('dashboard', selected_date=date_str) }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('core.dashboard', selected_date=date_str) }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-1"></i> Back
                             </a>
                             
