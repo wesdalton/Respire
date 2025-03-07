@@ -3,17 +3,10 @@
 {% block content %}
 <h1 class="mb-4">Burnout Predictor Dashboard</h1>
 
-<!-- Authentication Status -->
-{% if whoop_authenticated %}
-<div class="alert alert-success mb-4">
-    <i class="fas fa-check-circle"></i> Connected to Whoop
+<!-- Data Status Banner -->
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i> Track your health metrics and monitor burnout risk over time
 </div>
-{% else %}
-<div class="alert alert-warning mb-4">
-    <i class="fas fa-exclamation-triangle"></i> Not connected to Whoop
-    <a href="{{ url_for('auth') }}" class="btn btn-sm btn-info ml-2">Connect Now</a>
-</div>
-{% endif %}
 
 <!-- Day Navigation and Data Card -->
 <div class="row mb-4">
@@ -365,12 +358,9 @@
                             {% endif %}
                         {% endif %}
                         
-                        <form method="post" action="{{ url_for('manual_fetch_data') }}" class="d-inline">
-                            <input type="hidden" name="date" value="{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}">
-                            <button type="submit" class="btn btn-secondary">Fetch Whoop Data</button>
-                        </form>
-                        
-                        <a href="{{ url_for('auth') }}" class="btn btn-info">Authenticate with Whoop</a>
+                        <a href="{{ url_for('settings') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-cog me-1"></i> Settings
+                        </a>
                     </div>
                 </div>
                 {% else %}
@@ -389,11 +379,9 @@
                         {{ selected_date.strftime('%b %d') }}
                     {% endif %}
                 </a>
-                <form method="post" action="{{ url_for('manual_fetch_data') }}" class="d-inline">
-                    <input type="hidden" name="date" value="{% if selected_date is string %}{{ selected_date }}{% else %}{{ selected_date.strftime('%Y-%m-%d') }}{% endif %}">
-                    <button type="submit" class="btn btn-secondary">Fetch Whoop Data</button>
-                </form>
-                <a href="{{ url_for('auth') }}" class="btn btn-info">Authenticate with Whoop</a>
+                <a href="{{ url_for('settings') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-cog me-1"></i> Settings
+                </a>
                 {% endif %}
             </div>
         </div>
@@ -609,6 +597,32 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    // Browser detection to help with debugging
+    function detectBrowser() {
+        const userAgent = navigator.userAgent;
+        let browserName;
+        
+        if (userAgent.match(/chrome|chromium|crios/i)) {
+            browserName = "Chrome";
+        } else if (userAgent.match(/firefox|fxios/i)) {
+            browserName = "Firefox";
+        } else if (userAgent.match(/safari/i)) {
+            browserName = "Safari";
+        } else if (userAgent.match(/opr\//i)) {
+            browserName = "Opera";
+        } else if (userAgent.match(/edg/i)) {
+            browserName = "Edge";
+        } else {
+            browserName = "Unknown";
+        }
+        
+        return browserName;
+    }
+    
+    // Log browser information to help with debugging
+    console.log("Browser: " + detectBrowser());
+    console.log("User Agent: " + navigator.userAgent);
+    
     // Check if Plotly is available
     if (typeof Plotly === 'undefined') {
         document.getElementById('time-series-chart-debug').textContent = "ERROR: Plotly library not loaded";
@@ -651,13 +665,29 @@
                     loadingInsights.style.display = 'none';
                     
                     // Show results
+                    console.log("API response:", data); // Debug: Log the response for browser console
+                    
                     if (data.success) {
-                        // Parse markdown content
-                        const htmlContent = marked.parse(data.insight);
-                        insightsResult.innerHTML = htmlContent;
-                        insightsResult.style.display = 'block';
-                        insightsBtnText.textContent = 'Refresh Insights';
+                        try {
+                            // Parse markdown content
+                            const htmlContent = marked.parse(data.insight);
+                            insightsResult.innerHTML = htmlContent;
+                            insightsResult.style.display = 'block';
+                            insightsBtnText.textContent = 'Refresh Insights';
+                        } catch (parseError) {
+                            console.error("Error parsing markdown:", parseError);
+                            // Fallback to raw display in case of parsing error
+                            insightsResult.innerHTML = `
+                                <div class="p-3">
+                                    <h4>AI Insights</h4>
+                                    <pre>${data.insight}</pre>
+                                </div>
+                            `;
+                            insightsResult.style.display = 'block';
+                            insightsBtnText.textContent = 'Refresh Insights';
+                        }
                     } else {
+                        console.warn("API error:", data.error);
                         insightsResult.innerHTML = `
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
