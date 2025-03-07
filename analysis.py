@@ -579,11 +579,11 @@ def generate_time_series_plot(days=30, db_records=None):
                 name="No Data Available"
             ))
             
-            # Add risk zones as horizontal areas
+            # Add risk zones as horizontal areas with default values for empty dataframe
             fig.add_shape(
                 type="rect",
-                x0=df["date"].min() if not df.empty else 0,
-                x1=df["date"].max() if not df.empty else 1,
+                x0=0,
+                x1=1,
                 y0=0, y1=33,
                 fillcolor="rgba(0, 255, 0, 0.1)",
                 line=dict(width=0),
@@ -592,8 +592,8 @@ def generate_time_series_plot(days=30, db_records=None):
             
             fig.add_shape(
                 type="rect",
-                x0=df["date"].min() if not df.empty else 0,
-                x1=df["date"].max() if not df.empty else 1,
+                x0=0,
+                x1=1,
                 y0=33, y1=66,
                 fillcolor="rgba(255, 255, 0, 0.1)",
                 line=dict(width=0),
@@ -602,53 +602,53 @@ def generate_time_series_plot(days=30, db_records=None):
             
             fig.add_shape(
                 type="rect",
-                x0=df["date"].min() if not df.empty else 0,
-                x1=df["date"].max() if not df.empty else 1,
+                x0=0,
+                x1=1,
                 y0=66, y1=100,
                 fillcolor="rgba(255, 0, 0, 0.1)",
                 line=dict(width=0),
                 layer="below"
             )
-            
-            # Update layout with second y-axis
-            fig.update_layout(
-                title="Recovery, Mood, and Burnout Risk Over Time",
-                title_font=dict(size=18, family="Arial, sans-serif"),
-                xaxis_title="Date",
-                xaxis_title_font=dict(size=14),
-                yaxis=dict(
-                    title="Score (0-100)",
-                    range=[0, 105],
-                    gridcolor="rgba(0,0,0,0.1)",
-                    side="left",  # Ensure main axis is on the left
-                    titlefont=dict(size=14, family="Arial, sans-serif"),
-                    tickfont=dict(size=12)
-                ),
-                yaxis2=dict(
-                    title="Strain (0-21)",
-                    titlefont=dict(size=14, family="Arial, sans-serif", color="rgba(128,0,128,0.8)"),
-                    tickfont=dict(size=12, color="rgba(128,0,128,0.8)"),
-                    range=[0, 21],
-                    overlaying="y",
-                    side="right",
-                    gridcolor="rgba(128,0,128,0.1)",
-                    showgrid=False
-                ),
-                legend=dict(
-                    x=0.01, 
-                    y=1.15, 
-                    orientation="h", 
-                    bgcolor="rgba(255,255,255,0.8)",
-                    bordercolor="rgba(0,0,0,0.2)",
-                    borderwidth=1,
-                    font=dict(size=12)
-                ),
-                hovermode="x unified",
-                margin=dict(t=80, b=50, l=70, r=70),
-                height=500,
-                paper_bgcolor='rgba(255,255,255,0.8)',
-                plot_bgcolor='rgba(250,250,250,0.8)'
-            )
+        
+        # Update layout with second y-axis - moved outside the if/else block
+        fig.update_layout(
+            title="Recovery, Mood, and Burnout Risk Over Time",
+            title_font=dict(size=18, family="Arial, sans-serif"),
+            xaxis_title="Date",
+            xaxis_title_font_size=14,
+            yaxis=dict(
+                title="Score (0-100)",
+                range=[0, 105],
+                gridcolor="rgba(0,0,0,0.1)",
+                side="left",  # Ensure main axis is on the left
+                title_font=dict(size=14, family="Arial, sans-serif"),
+                tickfont=dict(size=12)
+            ),
+            yaxis2=dict(
+                title="Strain (0-21)",
+                title_font=dict(size=14, family="Arial, sans-serif", color="rgba(128,0,128,0.8)"),
+                tickfont=dict(size=12, color="rgba(128,0,128,0.8)"),
+                range=[0, 21],
+                overlaying="y",
+                side="right",
+                gridcolor="rgba(128,0,128,0.1)",
+                showgrid=False
+            ),
+            legend=dict(
+                x=0.01, 
+                y=1.15, 
+                orientation="h", 
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor="rgba(0,0,0,0.2)",
+                borderwidth=1,
+                font=dict(size=12)
+            ),
+            hovermode="x unified",
+            margin=dict(t=80, b=50, l=70, r=70),
+            height=500,
+            paper_bgcolor='rgba(255,255,255,0.8)',
+            plot_bgcolor='rgba(250,250,250,0.8)'
+        )
         
         # Format data and layout for proper parsing in JavaScript
         data_json = {

@@ -618,8 +618,9 @@
         document.getElementById('correlation-chart-debug').textContent = "Plotly library loaded | {{ correlation_plot is not none }}";
     }
     
-    // AI Insights handler
+    // Main document ready handler - contains all JavaScript initialization
     document.addEventListener('DOMContentLoaded', function() {
+        // AI Insights handler
         const loadInsightsBtn = document.getElementById('load-insights-btn');
         const insightsContent = document.getElementById('insights-content');
         const loadingInsights = document.getElementById('loading-insights');
@@ -686,84 +687,85 @@
             });
         }
     
-    {% if time_series %}
-    try {
-        const actualData = {{ time_series|safe }};
-        if (actualData && actualData.data && actualData.layout) {
-            // Display debug info about what traces we have
-            let traceInfo = "";
-            if (Array.isArray(actualData.data)) {
-                traceInfo = `Found ${actualData.data.length} traces: `;
-                actualData.data.forEach((trace, i) => {
-                    traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
-                });
+        // Time Series Chart Initialization
+        {% if time_series %}
+        try {
+            const actualData = {{ time_series|safe }};
+            if (actualData && actualData.data && actualData.layout) {
+                // Display debug info about what traces we have
+                let traceInfo = "";
+                if (Array.isArray(actualData.data)) {
+                    traceInfo = `Found ${actualData.data.length} traces: `;
+                    actualData.data.forEach((trace, i) => {
+                        traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
+                    });
+                }
+                document.getElementById('time-series-chart-debug').textContent = traceInfo;
+                
+                // Force all traces to be visible
+                if (Array.isArray(actualData.data)) {
+                    actualData.data.forEach(trace => {
+                        trace.visible = true;
+                    });
+                }
+                
+                // Enable secondary y-axis explicitly in layout
+                if (actualData.layout && !actualData.layout.yaxis2) {
+                    actualData.layout.yaxis2 = {
+                        title: "Strain (0-21)",
+                        range: [0, 21],
+                        overlaying: "y",
+                        side: "right"
+                    };
+                }
+                
+                Plotly.newPlot('time-series-chart', actualData.data, actualData.layout);
+                document.getElementById('time-series-chart-debug').textContent += " | Plotted successfully";
+            } else {
+                document.getElementById('time-series-chart-debug').textContent = "Invalid data structure";
             }
-            document.getElementById('time-series-chart-debug').textContent = traceInfo;
-            
-            // Force all traces to be visible
-            if (Array.isArray(actualData.data)) {
-                actualData.data.forEach(trace => {
-                    trace.visible = true;
-                });
-            }
-            
-            // Enable secondary y-axis explicitly in layout
-            if (actualData.layout && !actualData.layout.yaxis2) {
-                actualData.layout.yaxis2 = {
-                    title: "Strain (0-21)",
-                    range: [0, 21],
-                    overlaying: "y",
-                    side: "right"
-                };
-            }
-            
-            Plotly.newPlot('time-series-chart', actualData.data, actualData.layout);
-            document.getElementById('time-series-chart-debug').textContent += " | Plotted successfully";
-        } else {
-            document.getElementById('time-series-chart-debug').textContent = "Invalid data structure";
+        } catch (err) {
+            document.getElementById('time-series-chart-debug').textContent = "Error: " + err.message;
         }
-    } catch (err) {
-        document.getElementById('time-series-chart-debug').textContent = "Error: " + err.message;
-    }
-    {% else %}
-    document.getElementById('time-series-chart-debug').textContent = "No time series data passed to template";
-    {% endif %}
-    
-    {% if correlation_plot %}
-    try {
-        const actualData = {{ correlation_plot|safe }};
-        if (actualData && actualData.data && actualData.layout) {
-            // Display debug info about what traces we have
-            let traceInfo = "";
-            if (Array.isArray(actualData.data)) {
-                traceInfo = `Found ${actualData.data.length} traces: `;
-                actualData.data.forEach((trace, i) => {
-                    traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
-                });
+        {% else %}
+        document.getElementById('time-series-chart-debug').textContent = "No time series data passed to template";
+        {% endif %}
+        
+        // Correlation Plot Initialization
+        {% if correlation_plot %}
+        try {
+            const actualData = {{ correlation_plot|safe }};
+            if (actualData && actualData.data && actualData.layout) {
+                // Display debug info about what traces we have
+                let traceInfo = "";
+                if (Array.isArray(actualData.data)) {
+                    traceInfo = `Found ${actualData.data.length} traces: `;
+                    actualData.data.forEach((trace, i) => {
+                        traceInfo += `${i+1}:${trace.name || 'unnamed'} `;
+                    });
+                }
+                document.getElementById('correlation-chart-debug').textContent = traceInfo;
+                
+                // Force all traces to be visible
+                if (Array.isArray(actualData.data)) {
+                    actualData.data.forEach(trace => {
+                        trace.visible = true;
+                    });
+                }
+                
+                Plotly.newPlot('correlation-chart', actualData.data, actualData.layout);
+                document.getElementById('correlation-chart-debug').textContent += " | Plotted successfully";
+            } else {
+                document.getElementById('correlation-chart-debug').textContent = "Invalid data structure";
             }
-            document.getElementById('correlation-chart-debug').textContent = traceInfo;
-            
-            // Force all traces to be visible
-            if (Array.isArray(actualData.data)) {
-                actualData.data.forEach(trace => {
-                    trace.visible = true;
-                });
-            }
-            
-            Plotly.newPlot('correlation-chart', actualData.data, actualData.layout);
-            document.getElementById('correlation-chart-debug').textContent += " | Plotted successfully";
-        } else {
-            document.getElementById('correlation-chart-debug').textContent = "Invalid data structure";
+        } catch (err) {
+            document.getElementById('correlation-chart-debug').textContent = "Error: " + err.message;
         }
-    } catch (err) {
-        document.getElementById('correlation-chart-debug').textContent = "Error: " + err.message;
-    }
-    {% else %}
-    document.getElementById('correlation-chart-debug').textContent = "No correlation plot data passed to template";
-    {% endif %}
+        {% else %}
+        document.getElementById('correlation-chart-debug').textContent = "No correlation plot data passed to template";
+        {% endif %}
     
-    // Custom Calendar Implementation
-    document.addEventListener('DOMContentLoaded', function() {
+        // Custom Calendar Implementation
         const datePickerToggle = document.getElementById('date-picker-toggle');
         const calendarPopup = document.getElementById('custom-calendar');
         const daysContainer = document.getElementById('calendar-days');
