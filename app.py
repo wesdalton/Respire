@@ -644,6 +644,202 @@ def calendar_data(year, month):
         logger.error(f"Error getting calendar data: {str(e)}")
         return jsonify({"error": str(e)})
 
+@app.route('/settings')
+@login_required
+def settings():
+    """
+    Settings page for managing user preferences, integrations, and app settings
+    """
+    user_id = get_user_id()
+    
+    # Check if the user is connected to WHOOP
+    try:
+        token_info = get_whoop_token(user_id)
+        whoop_authenticated = token_info.get("access_token") is not None
+    except Exception as e:
+        logger.error(f"Error checking WHOOP token: {str(e)}")
+        whoop_authenticated = False
+    
+    # Get the OpenAI API key from environment variables
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key:
+        # Mask the key for display
+        key_start = openai_key[:4]
+        key_end = openai_key[-4:] if len(openai_key) > 8 else ""
+        masked_key = f"{key_start}...{key_end}"
+    else:
+        masked_key = None
+    
+    # Get AI model preference (default to gpt-4-turbo-preview)
+    ai_model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+    
+    # Get notification preferences (placeholder for future implementation)
+    notification_settings = {
+        "email_notifications": False,
+        "high_risk_alerts": False,
+        "weekly_summary": False
+    }
+    
+    # Get appearance settings (placeholder for future implementation)
+    appearance_settings = {
+        "theme": "system",
+        "chart_type": "time_series"
+    }
+    
+    return render_template(
+        'settings.html',
+        whoop_authenticated=whoop_authenticated,
+        openai_key=masked_key,
+        ai_model=ai_model,
+        notification_settings=notification_settings,
+        appearance_settings=appearance_settings,
+        now=datetime.now()
+    )
+
+@app.route('/update_openai_key', methods=['POST'])
+@login_required
+def update_openai_key():
+    """
+    Update the OpenAI API key in the .env file
+    """
+    api_key = request.form.get('openai_api_key', '').strip()
+    ai_model = request.form.get('ai_model', 'gpt-4-turbo-preview')
+    
+    # Only update if a key is provided
+    if api_key:
+        try:
+            # Read the current .env file
+            env_path = os.path.join(os.getcwd(), '.env')
+            with open(env_path, 'r') as f:
+                env_lines = f.readlines()
+            
+            # Update or add the OPENAI_API_KEY
+            key_found = False
+            model_found = False
+            new_lines = []
+            
+            for line in env_lines:
+                if line.startswith('OPENAI_API_KEY='):
+                    # Update the key
+                    new_lines.append(f'OPENAI_API_KEY="{api_key}"\n')
+                    key_found = True
+                elif line.startswith('OPENAI_MODEL='):
+                    # Update the model
+                    new_lines.append(f'OPENAI_MODEL={ai_model}\n')
+                    model_found = True
+                else:
+                    new_lines.append(line)
+            
+            # Add the key if not found
+            if not key_found:
+                new_lines.append(f'OPENAI_API_KEY="{api_key}"\n')
+            
+            # Add the model if not found
+            if not model_found:
+                new_lines.append(f'OPENAI_MODEL={ai_model}\n')
+            
+            # Write back to the .env file
+            with open(env_path, 'w') as f:
+                f.writelines(new_lines)
+            
+            # Update the environment variables in the current process
+            os.environ['OPENAI_API_KEY'] = api_key
+            os.environ['OPENAI_MODEL'] = ai_model
+            
+            # Also update the insights engine
+            from ai_insights import insights_engine
+            insights_engine.api_key = api_key
+            
+            flash("OpenAI API key and model saved successfully")
+        except Exception as e:
+            logger.error(f"Error updating OpenAI API key: {str(e)}")
+            flash(f"Error saving OpenAI API key: {str(e)}")
+    else:
+        # If no key provided, just update the model
+        try:
+            # Read the current .env file
+            env_path = os.path.join(os.getcwd(), '.env')
+            with open(env_path, 'r') as f:
+                env_lines = f.readlines()
+            
+            # Update or add the OPENAI_MODEL
+            model_found = False
+            new_lines = []
+            
+            for line in env_lines:
+                if line.startswith('OPENAI_MODEL='):
+                    # Update the model
+                    new_lines.append(f'OPENAI_MODEL={ai_model}\n')
+                    model_found = True
+                else:
+                    new_lines.append(line)
+            
+            # Add the model if not found
+            if not model_found:
+                new_lines.append(f'OPENAI_MODEL={ai_model}\n')
+            
+            # Write back to the .env file
+            with open(env_path, 'w') as f:
+                f.writelines(new_lines)
+            
+            # Update the environment variable in the current process
+            os.environ['OPENAI_MODEL'] = ai_model
+            
+            flash("AI model preference saved")
+        except Exception as e:
+            logger.error(f"Error updating AI model: {str(e)}")
+            flash(f"Error saving AI model preference: {str(e)}")
+    
+    return redirect(url_for('settings'))
+
+@app.route('/disconnect_whoop', methods=['POST'])
+@login_required
+def disconnect_whoop():
+    """
+    Disconnect the user's WHOOP account
+    """
+    user_id = get_user_id()
+    
+    try:
+        # Remove the token from the database
+        # Placeholder: Implement token deletion
+        flash("WHOOP account disconnected successfully")
+    except Exception as e:
+        logger.error(f"Error disconnecting WHOOP: {str(e)}")
+        flash(f"Error disconnecting WHOOP: {str(e)}")
+    
+    return redirect(url_for('settings'))
+
+@app.route('/update_notifications', methods=['POST'])
+@login_required
+def update_notifications():
+    """
+    Update notification settings
+    """
+    # Placeholder for future implementation
+    flash("Notification settings updated")
+    return redirect(url_for('settings'))
+
+@app.route('/update_appearance', methods=['POST'])
+@login_required
+def update_appearance():
+    """
+    Update appearance settings
+    """
+    # Placeholder for future implementation
+    flash("Appearance settings updated")
+    return redirect(url_for('settings'))
+
+@app.route('/update_account', methods=['POST'])
+@login_required
+def update_account():
+    """
+    Update account settings (password)
+    """
+    # Placeholder for future implementation
+    flash("Account settings updated")
+    return redirect(url_for('settings'))
+
 @app.route('/auth')
 @login_required
 def auth():

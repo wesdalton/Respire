@@ -199,8 +199,11 @@ Keep your entire response under 350 words, prioritizing specificity and relevanc
                 "Authorization": f"Bearer {self.api_key}"
             }
             
+            # Get the model preference (default to gpt-4-turbo-preview)
+            model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+            
             payload = {
-                "model": "gpt-4-turbo-preview",
+                "model": model,
                 "messages": messages,
                 "temperature": 0.7,
                 "max_tokens": 800
