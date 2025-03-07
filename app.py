@@ -537,20 +537,26 @@ def delete_mood(selected_date):
             if selected_records and len(selected_records) > 0:
                 record = selected_records[0]
                 
-                # Create updated record without mood data
-                updated_record = {
-                    "date": date_str,
-                    "mood_rating": None,
-                    "notes": None
-                }
+                # Create updated record without mood data by making a direct PATCH call to Supabase
+                # This ensures the mood_rating is set to NULL in the database
+                from supabase_client import supabase_client
                 
-                # Keep all other metrics
-                for key, value in record.items():
-                    if key not in ["mood_rating", "notes", "date", "user_id", "id"]:
-                        updated_record[key] = value
-                
-                # Update the record in Supabase
-                save_daily_metrics(user_id, updated_record)
+                try:
+                    # Direct PATCH request to set mood_rating to null
+                    response = supabase_client.table("daily_metrics").update({
+                        "mood_rating": None,
+                        "notes": None,
+                        "updated_at": datetime.now().isoformat()
+                    }).eq("user_id", user_id).eq("date", date_str).execute()
+                    
+                    logger.info(f"Delete mood response: {response}")
+                    
+                    if len(response.data) == 0:
+                        raise Exception("No records were updated")
+                        
+                except Exception as e:
+                    logger.error(f"Error in direct Supabase update: {str(e)}")
+                    raise e
                 flash("Mood rating deleted successfully.")
             else:
                 flash("No mood data found for this date.")
