@@ -145,6 +145,60 @@ Refer to [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed instructions on set
 - OpenAI API calls follow strict data minimization principles
 - No third-party analytics or tracking
 
+## Deploying to Vercel
+
+Due to Vercel's serverless function size limitations with Python projects, there are two deployment approaches:
+
+### Option 1: Simple Landing Page Deployment
+
+This approach deploys a simple landing page as a placeholder for your full application:
+
+1. **Navigate to the minimal deployment directory**
+   ```bash
+   cd vercel-deploy
+   ```
+
+2. **Install Vercel CLI and login**
+   ```bash
+   npm install -g vercel
+   vercel login
+   ```
+
+3. **Deploy the landing page**
+   ```bash
+   vercel --prod
+   ```
+
+The result will be a simple landing page that serves as a placeholder for your full application. You can view the deployed site at: https://vercel-deploy-ksuk0zgjy-wesley-wesleydaltons-projects.vercel.app
+
+### Option 2: Full Application Deployment (Advanced)
+
+For the full application to work on Vercel, you would need to:
+
+1. **Split your application into smaller functions**
+   - Restructure the app into API routes
+   - Use frontend-only components where possible
+
+2. **Use Vercel edge functions or middleware**
+   - Convert Flask routes to serverless functions
+   - Optimize package sizes
+
+3. **Set up environment variables in the Vercel dashboard**
+   - Go to your project settings in the Vercel dashboard
+   - Navigate to the "Environment Variables" section
+   - Add all the required variables from your .env file
+
+### Recommended Alternative
+
+For a Python application of this complexity, consider alternatives like:
+- Heroku
+- Railway
+- DigitalOcean App Platform
+- Google Cloud Run
+- AWS Elastic Beanstalk
+
+These platforms better support full Flask applications with their dependencies.
+
 ## Contributing
 
 1. Fork the repository

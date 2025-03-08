@@ -329,13 +329,92 @@
                 </div>
             </div>
             
-            <!-- Time Series Chart -->
+            <!-- Apple-style Metrics Visualization -->
             <div class="dashboard-chart mb-4">
-                <div class="chart-header">
-                    <h2>Metrics Over Time</h2>
+                <div class="apple-chart-header">
+                    <div class="apple-chart-title">
+                        <h2>Health Metrics</h2>
+                        <p class="apple-chart-subtitle">Tracking your key wellness indicators</p>
+                    </div>
+                    <div class="apple-chart-actions">
+                        <div class="chart-period-selector">
+                            <button class="chart-period-option active" data-days="7">Week</button>
+                            <button class="chart-period-option" data-days="14">2 Weeks</button>
+                            <button class="chart-period-option" data-days="30">Month</button>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Key Insights Cards -->
+                <div class="apple-insights-container">
+                    <!-- Recovery Trend Insight -->
+                    <div class="apple-insight-card neutral">
+                        <div class="apple-insight-title">Recovery Trend</div>
+                        <div class="apple-insight-value neutral">
+                            {{ selected_record.get('recovery_score')|round if selected_record is mapping and selected_record.get('recovery_score') is not none else selected_record.recovery_score|round if not selected_record is mapping and selected_record.recovery_score is not none else "–" }}
+                            <!-- Simplified trend indicator -->
+                            <span class="apple-trend-indicator flat"><i class="fas fa-minus me-1"></i> Trend</span>
+                        </div>
+                        <p class="apple-insight-description">
+                            No recovery data available for today.
+                        </p>
+                    </div>
+                    
+                    <!-- Mood Trend Insight -->
+                    <div class="apple-insight-card positive">
+                        <div class="apple-insight-title">Mood State</div>
+                        <div class="apple-insight-value positive">
+                            {{ selected_record.get('mood_rating') if selected_record is mapping and selected_record.get('mood_rating') is not none else selected_record.mood_rating if not selected_record is mapping and selected_record.mood_rating is not none else "–" }}
+                            <!-- Simplified trend indicator -->
+                            <span class="apple-trend-indicator flat"><i class="fas fa-minus me-1"></i> Trend</span>
+                        </div>
+                        <p class="apple-insight-description">
+                            Your mood affects your overall wellness significantly.
+                        </p>
+                    </div>
+                    
+                    <!-- Strain-Recovery Balance Insight -->
+                    <div class="apple-insight-card neutral">
+                        <div class="apple-insight-title">Strain Balance</div>
+                        <div class="apple-insight-value neutral">
+                            <!-- Simplified balance value -->
+                            <span>–</span>
+                        </div>
+                        <p class="apple-insight-description">
+                            Balance data unavailable. Check strain and recovery metrics.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Chart Toggle Buttons -->
+                <div class="apple-chart-toggle">
+                    <button class="apple-chart-toggle-btn active" data-chart-type="metrics">Health Metrics</button>
+                    <button class="apple-chart-toggle-btn" data-chart-type="burnout">Burnout Risk</button>
+                </div>
+                
+                <!-- Simplified Visualizations -->
                 {% if time_series %}
-                <div id="time-series-chart" class="chart-container"></div>
+                <div class="apple-chart-container">
+                    <div id="apple-metrics-chart" class="metrics-simplified-chart"></div>
+                </div>
+                <div class="apple-chart-legend">
+                    <div class="apple-legend-item">
+                        <span class="apple-legend-color" style="background-color: #28a745;"></span>
+                        <span>Recovery</span>
+                    </div>
+                    <div class="apple-legend-item">
+                        <span class="apple-legend-color" style="background-color: #4361ee;"></span>
+                        <span>Mood</span>
+                    </div>
+                    <div class="apple-legend-item">
+                        <span class="apple-legend-color" style="background-color: #6f42c1;"></span>
+                        <span>Strain</span>
+                    </div>
+                    <div class="apple-legend-item">
+                        <span class="apple-legend-color" style="background-color: #dc3545;"></span>
+                        <span>Burnout Risk</span>
+                    </div>
+                </div>
                 {% else %}
                 <div class="no-data-container">
                     <i class="fas fa-chart-line no-data-icon"></i>
@@ -347,38 +426,26 @@
         
         <!-- Right Column - Burnout Risk & Insights -->
         <div class="col-lg-5">
-            <!-- Burnout Risk Card -->
+            <!-- Apple-style Burnout Risk Card -->
             <div class="burnout-risk-card mb-4">
-                <div class="burnout-header">
-                    <div class="burnout-title">
-                        <h2>Burnout Risk</h2>
-                        <div class="tooltip-icon" data-bs-toggle="tooltip" data-bs-html="true" 
-                             title="<div class='p-2'>Calculated from your recovery scores, mood ratings, HRV, sleep quality, and strain-recovery balance over time</div>">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
+                <div class="apple-burnout-header">
+                    <div class="apple-burnout-title">
+                        <h2><i class="fas fa-shield-alt"></i> Burnout Risk</h2>
+                        <p class="apple-burnout-subtitle">Your personal risk assessment for {{ selected_date.strftime('%A, %b %d') if not selected_date is string else selected_date }}</p>
                     </div>
-                    
-                    <div class="risk-date">
-                        {% if selected_date is string %}
-                            {{ selected_date }}
-                        {% else %}
-                            {{ selected_date.strftime('%A, %B %d, %Y') }}
-                        {% endif %}
+                    <div class="tooltip-icon" data-bs-toggle="tooltip" data-bs-html="true" 
+                         title="<div class='p-2'>Calculated from your recovery scores, mood ratings, HRV, sleep quality, and strain-recovery balance over time</div>">
+                        <i class="fas fa-info-circle"></i>
                     </div>
                 </div>
                 
-                <div class="risk-gauge-container">
-                    <div class="risk-gauge 
-                        {% if burnout_risk is not none and burnout_risk < 33 %}risk-low
-                        {% elif burnout_risk is not none and burnout_risk < 66 %}risk-medium
-                        {% elif burnout_risk is not none %}risk-high
-                        {% endif %}"
-                        {% if burnout_risk is not none %}
-                        style="--risk-percentage: {{ burnout_risk }}%"
-                        {% endif %}
-                    >
-                        <div class="risk-value">{{ burnout_risk|round if burnout_risk is not none else "–" }}%</div>
-                        <div class="risk-level">
+                <div class="apple-risk-summary">
+                    <div class="apple-risk-gauge" style="--risk-degree: {% if burnout_risk is not none %}{{ burnout_risk * 1.8 }}deg{% else %}0deg{% endif %}">
+                        <div class="apple-risk-value">{{ burnout_risk|round if burnout_risk is not none else "0" }}</div>
+                    </div>
+                    
+                    <div class="apple-risk-details">
+                        <div class="apple-risk-level {% if burnout_risk is not none and burnout_risk < 33 %}low{% elif burnout_risk is not none and burnout_risk < 66 %}medium{% else %}high{% endif %}">
                             {% if burnout_risk is not none and burnout_risk < 33 %}
                             Low Risk
                             {% elif burnout_risk is not none and burnout_risk < 66 %}
@@ -386,100 +453,100 @@
                             {% elif burnout_risk is not none %}
                             High Risk
                             {% else %}
-                            No Data
+                            No Risk Data
                             {% endif %}
                         </div>
                         
-                        {% if selected_record is mapping and selected_record.get('burnout_trend') or not selected_record is mapping and selected_record.burnout_trend %}
-                            {% if selected_record is mapping %}
-                                {% if selected_record.get('burnout_trend') > 5 %}
-                                <div class="risk-trend negative"><i class="fas fa-arrow-up"></i> Increasing</div>
-                                {% elif selected_record.get('burnout_trend') < -5 %}
-                                <div class="risk-trend positive"><i class="fas fa-arrow-down"></i> Decreasing</div>
-                                {% endif %}
+                        <p class="apple-risk-description">
+                            {% if burnout_risk is not none and burnout_risk < 33 %}
+                            You're currently at low risk for burnout. Continue your healthy habits and monitor your metrics regularly.
+                            {% elif burnout_risk is not none and burnout_risk < 66 %}
+                            Your burnout risk is moderate. Consider adding stress-reducing activities and more recovery time to your schedule.
+                            {% elif burnout_risk is not none %}
+                            You're at high risk for burnout. Prioritize rest, stress management, and consider speaking with a healthcare professional.
                             {% else %}
-                                {% if selected_record.burnout_trend > 5 %}
-                                <div class="risk-trend negative"><i class="fas fa-arrow-up"></i> Increasing</div>
-                                {% elif selected_record.burnout_trend < -5 %}
-                                <div class="risk-trend positive"><i class="fas fa-arrow-down"></i> Decreasing</div>
-                                {% endif %}
+                            Add more data to get an accurate burnout risk assessment. Track your mood and integrate with WHOOP.
                             {% endif %}
-                        {% endif %}
+                        </p>
                     </div>
                 </div>
                 
-                <div class="risk-breakdown">
-                    <h3>Risk Factors</h3>
-                    <div class="risk-factor-grid">
-                        <div class="risk-factor">
-                            <div class="rf-label">Recovery</div>
-                            <div class="rf-bar-container">
-                                <div class="rf-bar" style="width: 25%"></div>
-                                <div class="rf-value">25%</div>
-                            </div>
+                <div class="apple-risk-factors">
+                    <h3 class="apple-risk-factors-title">Contributing Factors</h3>
+                    
+                    <div class="apple-risk-factor">
+                        <div class="apple-rf-label">Recovery</div>
+                        <div class="apple-rf-bar-container">
+                            <div class="apple-rf-bar" style="width: 25%"></div>
                         </div>
-                        <div class="risk-factor">
-                            <div class="rf-label">Mood</div>
-                            <div class="rf-bar-container">
-                                <div class="rf-bar" style="width: 30%"></div>
-                                <div class="rf-value">30%</div>
-                            </div>
+                        <div class="apple-rf-value">25%</div>
+                    </div>
+                    
+                    <div class="apple-risk-factor">
+                        <div class="apple-rf-label">Mood</div>
+                        <div class="apple-rf-bar-container">
+                            <div class="apple-rf-bar" style="width: 30%; background-color: #4361ee;"></div>
                         </div>
-                        <div class="risk-factor">
-                            <div class="rf-label">HRV</div>
-                            <div class="rf-bar-container">
-                                <div class="rf-bar" style="width: 15%"></div>
-                                <div class="rf-value">15%</div>
-                            </div>
+                        <div class="apple-rf-value">30%</div>
+                    </div>
+                    
+                    <div class="apple-risk-factor">
+                        <div class="apple-rf-label">HRV</div>
+                        <div class="apple-rf-bar-container">
+                            <div class="apple-rf-bar" style="width: 15%; background-color: #6f42c1;"></div>
                         </div>
-                        <div class="risk-factor">
-                            <div class="rf-label">Sleep</div>
-                            <div class="rf-bar-container">
-                                <div class="rf-bar" style="width: 15%"></div>
-                                <div class="rf-value">15%</div>
-                            </div>
+                        <div class="apple-rf-value">15%</div>
+                    </div>
+                    
+                    <div class="apple-risk-factor">
+                        <div class="apple-rf-label">Sleep Quality</div>
+                        <div class="apple-rf-bar-container">
+                            <div class="apple-rf-bar" style="width: 15%; background-color: #20c997;"></div>
                         </div>
-                        <div class="risk-factor">
-                            <div class="rf-label">Strain Balance</div>
-                            <div class="rf-bar-container">
-                                <div class="rf-bar" style="width: 15%"></div>
-                                <div class="rf-value">15%</div>
-                            </div>
+                        <div class="apple-rf-value">15%</div>
+                    </div>
+                    
+                    <div class="apple-risk-factor">
+                        <div class="apple-rf-label">Strain Balance</div>
+                        <div class="apple-rf-bar-container">
+                            <div class="apple-rf-bar" style="width: 15%; background-color: #fd7e14;"></div>
                         </div>
+                        <div class="apple-rf-value">15%</div>
                     </div>
                 </div>
             </div>
             
-            <!-- AI Insights Card -->
+            <!-- Apple-style AI Insights Card -->
             <div class="insights-card mb-4">
-                <div class="insights-header">
-                    <h2><i class="fas fa-brain me-2"></i> AI Insights</h2>
-                    <div class="new-badge">New</div>
+                <div class="apple-insights-header">
+                    <div class="apple-insights-title">
+                        <h2><i class="fas fa-brain"></i> AI Insights</h2>
+                        <p class="apple-insights-subtitle">Personalized recommendations for your wellbeing</p>
+                    </div>
+                    <div class="apple-new-badge">
+                        <i class="fas fa-star"></i> New
+                    </div>
                 </div>
                 
                 <div id="ai-insights-preview">
-                    <p class="insights-intro">Get personalized analysis and recommendations based on your health metrics.</p>
+                    <p class="apple-insights-intro">Our AI analyzes your health patterns to provide personalized insights and actionable recommendations to help you prevent burnout and optimize your wellbeing.</p>
                     
-                    <div class="insights-actions mb-3">
-                        <button id="load-insights-btn" class="btn btn-primary w-100">
-                            <i class="fas fa-lightbulb me-2"></i>
-                            <span id="insights-btn-text">Generate Personalized Insights</span>
-                        </button>
-                    </div>
+                    <button id="load-insights-btn" class="apple-insights-button">
+                        <i class="fas fa-lightbulb"></i>
+                        <span id="insights-btn-text">Generate Insights</span>
+                    </button>
                     
-                    <div id="insights-content" class="mt-3" style="display: none;">
-                        <div id="loading-insights" class="insights-loading">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <p>Analyzing your data...</p>
+                    <div id="insights-content" style="display: none;">
+                        <div id="loading-insights" class="apple-insights-loading">
+                            <div class="spinner"></div>
+                            <p>Analyzing your health patterns...</p>
                         </div>
-                        <div id="insights-result" class="insights-result"></div>
+                        <div id="insights-result" class="apple-insights-result"></div>
                     </div>
                     
-                    <div class="insights-footer">
-                        <a href="{{ url_for('core.ai_insights') }}" class="btn btn-outline-primary btn-sm">
-                            Advanced Analysis <i class="fas fa-arrow-right ms-1"></i>
+                    <div class="apple-insights-footer">
+                        <a href="{{ url_for('core.ai_insights') }}" class="apple-insights-more">
+                            View advanced analysis <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
                 </div>
@@ -651,7 +718,7 @@
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         
-        // AI Insights handler
+        // Apple-style AI Insights handler
         const loadInsightsBtn = document.getElementById('load-insights-btn');
         const insightsContent = document.getElementById('insights-content');
         const loadingInsights = document.getElementById('loading-insights');
@@ -694,16 +761,16 @@
                         } catch (parseError) {
                             console.error("Error parsing markdown:", parseError);
                             // Fallback to raw display in case of parsing error
-                            insightsResult.innerHTML = `<div class="p-3"><pre>${data.insight}</pre></div>`;
+                            insightsResult.innerHTML = `<div><pre>${data.insight}</pre></div>`;
                             insightsResult.style.display = 'block';
                             insightsBtnText.textContent = 'Refresh Insights';
                         }
                     } else {
                         console.warn("API error:", data.error);
                         insightsResult.innerHTML = `
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                ${data.error || 'Could not generate insights'}
+                            <div style="padding: 1rem; color: #856404; background-color: #fff3cd; border-radius: 8px;">
+                                <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
+                                ${data.error || 'Could not generate insights. Try adding more data.'}
                             </div>
                         `;
                         insightsResult.style.display = 'block';
@@ -717,9 +784,9 @@
                     // Handle errors
                     loadingInsights.style.display = 'none';
                     insightsResult.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Error: ${error.message || 'Something went wrong'}
+                        <div style="padding: 1rem; color: #721c24; background-color: #f8d7da; border-radius: 8px;">
+                            <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>
+                            Error: ${error.message || 'Connection issue. Please try again.'}
                         </div>
                     `;
                     insightsResult.style.display = 'block';
@@ -729,55 +796,259 @@
             });
         }
     
-        // Time Series Chart Initialization
+        // Apple-style Chart Initialization
         {% if time_series %}
         try {
-            const actualData = {{ time_series|safe }};
-            if (actualData && actualData.data && actualData.layout) {
-                // Force all traces to be visible
-                if (Array.isArray(actualData.data)) {
-                    actualData.data.forEach(trace => {
-                        trace.visible = true;
+            const timeSeriesData = {{ time_series|safe }};
+            if (timeSeriesData && timeSeriesData.data && timeSeriesData.layout) {
+                // Create simplified Apple-style charts
+                const appleMetricsChart = document.getElementById('apple-metrics-chart');
+                
+                // Extract data from original time series
+                let dates = [];
+                let recoveryScores = [];
+                let moodRatings = [];
+                let strainValues = [];
+                let burnoutRisks = [];
+                
+                // Find the data in the original plot
+                timeSeriesData.data.forEach(trace => {
+                    if (trace.name === "Recovery Score") {
+                        dates = [...trace.x];
+                        recoveryScores = [...trace.y];
+                    } else if (trace.name === "Mood Rating") {
+                        moodRatings = [...trace.y];
+                    } else if (trace.name === "Strain (0-21)") {
+                        strainValues = [...trace.y];
+                    } else if (trace.name === "Burnout Risk") {
+                        burnoutRisks = [...trace.y];
+                    }
+                });
+                
+                // Scale mood values from 0-100 for better comparison (they're already scaled in the data)
+                
+                // Create simplified layout
+                const appleLayout = {
+                    margin: {t: 20, b: 30, l: 40, r: 30},
+                    font: {family: 'SF Pro Display, -apple-system, BlinkMacSystemFont, Inter, sans-serif'},
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    xaxis: {
+                        showgrid: false,
+                        zeroline: false,
+                        showline: true,
+                        linecolor: 'rgba(0,0,0,0.1)',
+                        tickformat: '%b %d'
+                    },
+                    yaxis: {
+                        range: [0, 100],
+                        showgrid: true,
+                        gridcolor: 'rgba(0,0,0,0.05)',
+                        zeroline: false,
+                        showticklabels: true,
+                        fixedrange: true
+                    },
+                    showlegend: false,
+                    hovermode: 'x unified'
+                };
+                
+                // Create metrics data
+                const metricsPlotData = [
+                    {
+                        x: dates,
+                        y: recoveryScores,
+                        name: 'Recovery',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { 
+                            color: '#28a745', 
+                            width: 3,
+                            shape: 'spline'
+                        },
+                        hovertemplate: '<b>Recovery:</b> %{y:.0f}<extra></extra>'
+                    },
+                    {
+                        x: dates,
+                        y: moodRatings,
+                        name: 'Mood',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { 
+                            color: '#4361ee', 
+                            width: 3,
+                            shape: 'spline'
+                        },
+                        hovertemplate: '<b>Mood:</b> %{y:.0f}<extra></extra>'
+                    },
+                    {
+                        x: dates,
+                        y: strainValues.map(v => v ? v * (100/21) : null), // Scale 0-21 to 0-100
+                        name: 'Strain',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { 
+                            color: '#6f42c1', 
+                            width: 2,
+                            shape: 'spline',
+                            dash: 'dot'
+                        },
+                        hovertemplate: '<b>Strain:</b> %{y:.0f}%<extra></extra>'
+                    }
+                ];
+                
+                // Burnout risk data
+                const burnoutPlotData = [
+                    {
+                        x: dates,
+                        y: burnoutRisks,
+                        name: 'Burnout Risk',
+                        type: 'scatter',
+                        mode: 'lines',
+                        fill: 'tozeroy',
+                        line: { 
+                            color: '#dc3545', 
+                            width: 2,
+                            shape: 'spline'
+                        },
+                        fillcolor: 'rgba(220, 53, 69, 0.2)',
+                        hovertemplate: '<b>Burnout Risk:</b> %{y:.0f}%<extra></extra>'
+                    }
+                ];
+                
+                // Add risk zones in the background
+                const riskZones = [
+                    {
+                        type: 'rect',
+                        x0: dates[0],
+                        x1: dates[dates.length - 1],
+                        y0: 0,
+                        y1: 33,
+                        fillcolor: 'rgba(40, 167, 69, 0.05)',
+                        line: { width: 0 },
+                        layer: 'below'
+                    },
+                    {
+                        type: 'rect',
+                        x0: dates[0],
+                        x1: dates[dates.length - 1],
+                        y0: 33,
+                        y1: 66,
+                        fillcolor: 'rgba(255, 193, 7, 0.05)',
+                        line: { width: 0 },
+                        layer: 'below'
+                    },
+                    {
+                        type: 'rect',
+                        x0: dates[0],
+                        x1: dates[dates.length - 1],
+                        y0: 66,
+                        y1: 100,
+                        fillcolor: 'rgba(220, 53, 69, 0.05)',
+                        line: { width: 0 },
+                        layer: 'below'
+                    }
+                ];
+                
+                // Add risk zones to burnout layout
+                const burnoutLayout = JSON.parse(JSON.stringify(appleLayout));
+                burnoutLayout.shapes = riskZones;
+                
+                // Initialize with metrics chart first
+                Plotly.newPlot('apple-metrics-chart', metricsPlotData, appleLayout, {
+                    displayModeBar: false,
+                    responsive: true
+                });
+                
+                // Initialize chart toggle buttons
+                const toggleButtons = document.querySelectorAll('.apple-chart-toggle-btn');
+                toggleButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // Remove active class from all buttons
+                        toggleButtons.forEach(b => b.classList.remove('active'));
+                        // Add active class to clicked button
+                        this.classList.add('active');
+                        
+                        // Switch between charts
+                        const chartType = this.getAttribute('data-chart-type');
+                        if (chartType === 'metrics') {
+                            Plotly.react('apple-metrics-chart', metricsPlotData, appleLayout, {
+                                displayModeBar: false,
+                                responsive: true
+                            });
+                        } else if (chartType === 'burnout') {
+                            Plotly.react('apple-metrics-chart', burnoutPlotData, burnoutLayout, {
+                                displayModeBar: false,
+                                responsive: true
+                            });
+                        }
                     });
-                }
+                });
                 
-                // Customize the layout for a more modern look
-                if (actualData.layout) {
-                    // Update layout
-                    actualData.layout.paper_bgcolor = 'rgba(255,255,255,0)';
-                    actualData.layout.plot_bgcolor = 'rgba(255,255,255,0)';
-                    actualData.layout.margin = {t: 30, b: 40, l: 60, r: 60};
-                    actualData.layout.font = {family: 'Inter, system-ui, sans-serif'};
-                    actualData.layout.title = '';  // Remove title, we have it in the card header
-                    
-                    // Update axes
-                    if (actualData.layout.yaxis) {
-                        actualData.layout.yaxis.gridcolor = 'rgba(0,0,0,0.05)';
-                        actualData.layout.yaxis.title = null;
-                    }
-                    
-                    if (actualData.layout.xaxis) {
-                        actualData.layout.xaxis.gridcolor = 'rgba(0,0,0,0.05)';
-                    }
-                    
-                    // Enable secondary y-axis explicitly
-                    if (!actualData.layout.yaxis2) {
-                        actualData.layout.yaxis2 = {
-                            title: "Strain (0-21)",
-                            range: [0, 21],
-                            overlaying: "y",
-                            side: "right",
-                            gridcolor: 'rgba(0,0,0,0.0)',
-                            tickfont: {color: 'rgba(128,0,128,0.8)'},
-                        };
-                    }
-                }
-                
-                Plotly.newPlot('time-series-chart', actualData.data, actualData.layout, {responsive: true});
+                // Initialize period selector
+                const periodButtons = document.querySelectorAll('.chart-period-option');
+                periodButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // Remove active class from all buttons
+                        periodButtons.forEach(b => b.classList.remove('active'));
+                        // Add active class to clicked button
+                        this.classList.add('active');
+                        
+                        // Get selected days
+                        const days = parseInt(this.getAttribute('data-days'));
+                        
+                        // Filter data based on selected period
+                        const cutoffIndex = Math.max(0, dates.length - days);
+                        
+                        // Update metrics chart data
+                        const filteredMetricsData = metricsPlotData.map(trace => {
+                            return {
+                                ...trace,
+                                x: dates.slice(cutoffIndex),
+                                y: trace.y.slice(cutoffIndex)
+                            };
+                        });
+                        
+                        // Update burnout chart data
+                        const filteredBurnoutData = burnoutPlotData.map(trace => {
+                            return {
+                                ...trace,
+                                x: dates.slice(cutoffIndex),
+                                y: trace.y.slice(cutoffIndex)
+                            };
+                        });
+                        
+                        // Update risk zones
+                        const updatedRiskZones = riskZones.map(zone => {
+                            return {
+                                ...zone,
+                                x0: dates[cutoffIndex],
+                                x1: dates[dates.length - 1]
+                            };
+                        });
+                        
+                        // Update burnout layout
+                        const updatedBurnoutLayout = JSON.parse(JSON.stringify(burnoutLayout));
+                        updatedBurnoutLayout.shapes = updatedRiskZones;
+                        
+                        // Update currently visible chart
+                        const activeChart = document.querySelector('.apple-chart-toggle-btn.active').getAttribute('data-chart-type');
+                        if (activeChart === 'metrics') {
+                            Plotly.react('apple-metrics-chart', filteredMetricsData, appleLayout, {
+                                displayModeBar: false,
+                                responsive: true
+                            });
+                        } else {
+                            Plotly.react('apple-metrics-chart', filteredBurnoutData, updatedBurnoutLayout, {
+                                displayModeBar: false,
+                                responsive: true
+                            });
+                        }
+                    });
+                });
             }
         } catch (err) {
-            console.error("Error plotting time series chart:", err);
-            document.getElementById('time-series-chart').innerHTML = `
+            console.error("Error plotting Apple-style chart:", err);
+            document.getElementById('apple-metrics-chart').innerHTML = `
                 <div class="chart-error">
                     <i class="fas fa-exclamation-circle"></i>
                     <p>Error loading chart</p>

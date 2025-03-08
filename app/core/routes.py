@@ -359,7 +359,7 @@ def input_mood(input_date=None):
         # Get from SQLite
         record = get_metrics_by_date(user_id, date_str)
     
-    return render_template('input.html', mood_date=mood_date, date_str=date_str, record=record)
+    return render_template('input.html', mood_date=mood_date, date_str=date_str, record=record, now=datetime.now())
 
 @core_bp.route('/delete_mood/<string:selected_date>')
 @login_required
@@ -505,7 +505,8 @@ def ai_insights():
             'ai_insights.html',
             insights=None,  # Set to None to show loading animation
             records=records[:7],  # Show last 7 days of data
-            query=query
+            query=query,
+            now=datetime.now()
         )
             
     except Exception as e:
@@ -582,7 +583,8 @@ def settings():
         openai_key=masked_key,
         ai_model=ai_model,
         notification_settings=notification_settings,
-        appearance_settings=appearance_settings
+        appearance_settings=appearance_settings,
+        now=datetime.now()
     )
 
 @core_bp.route('/update_openai_key', methods=['POST'])

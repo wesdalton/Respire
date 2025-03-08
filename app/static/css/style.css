@@ -211,7 +211,7 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 400;
 }
 
-/* Chart Container */
+/* Apple-style Chart Container */
 .dashboard-chart {
     background-color: #fff;
     border-radius: var(--border-radius);
@@ -219,21 +219,215 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: var(--card-shadow);
 }
 
-.chart-header {
-    margin-bottom: 1rem;
+.apple-chart-header {
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
-.chart-header h2 {
-    font-size: 1.25rem;
+.apple-chart-title {
     margin: 0;
     color: var(--dark-color);
 }
 
-.chart-container {
-    height: 400px;
-    width: 100%;
+.apple-chart-title h2 {
+    font-size: 1.25rem;
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+}
+
+.apple-chart-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.apple-chart-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chart-period-selector {
+    display: flex;
     border-radius: 8px;
     overflow: hidden;
+    background-color: #f0f2f5;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.chart-period-option {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    background: none;
+    border: none;
+    font-weight: 500;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+.chart-period-option.active {
+    background-color: white;
+    color: var(--primary-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.apple-insights-container {
+    display: flex;
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+    gap: 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+.apple-insights-container::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
+.apple-insight-card {
+    min-width: 240px;
+    flex: 1;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    border-left: 4px solid;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.apple-insight-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+.apple-insight-card.positive {
+    border-left-color: var(--bs-success);
+}
+
+.apple-insight-card.neutral {
+    border-left-color: var(--bs-warning);
+}
+
+.apple-insight-card.negative {
+    border-left-color: var(--bs-danger);
+}
+
+.apple-insight-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.apple-insight-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.apple-insight-value.positive {
+    color: var(--bs-success);
+}
+
+.apple-insight-value.neutral {
+    color: var(--bs-warning);
+}
+
+.apple-insight-value.negative {
+    color: var(--bs-danger);
+}
+
+.apple-insight-description {
+    font-size: 0.9rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.apple-trend-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+.apple-trend-indicator.up {
+    background-color: rgba(var(--bs-success-rgb), 0.1);
+    color: var(--bs-success);
+}
+
+.apple-trend-indicator.down {
+    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    color: var(--bs-danger);
+}
+
+.apple-trend-indicator.flat {
+    background-color: rgba(var(--bs-secondary-rgb), 0.1);
+    color: var(--bs-secondary);
+}
+
+.apple-chart-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.apple-chart-toggle-btn {
+    background: none;
+    border: none;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.85rem;
+    border-radius: 15px;
+    color: #6c757d;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.apple-chart-toggle-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.apple-chart-container {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    height: 300px;
+    position: relative;
+}
+
+.metrics-simplified-chart {
+    height: 100%;
+    width: 100%;
+}
+
+.apple-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.5rem;
+}
+
+.apple-legend-item {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.apple-legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
 }
 
 .no-data-container {
@@ -261,57 +455,73 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center;
 }
 
-/* Burnout Risk Card */
+/* Apple-style Burnout Risk Card */
 .burnout-risk-card {
     background-color: #fff;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
-}
-
-.burnout-header {
     padding: 1.5rem;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.burnout-title {
+.apple-burnout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.apple-burnout-title {
+    margin: 0;
+}
+
+.apple-burnout-title h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    margin-bottom: 0.5rem;
 }
 
-.burnout-title h2 {
+.apple-burnout-title h2 i {
+    margin-right: 0.5rem;
+    color: var(--bs-danger);
+}
+
+.apple-burnout-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
     margin: 0;
-    font-size: 1.25rem;
 }
 
 .tooltip-icon {
     margin-left: 0.5rem;
     color: #adb5bd;
     cursor: pointer;
+    font-size: 0.9rem;
 }
 
 .risk-date {
     font-size: 0.9rem;
     color: #6c757d;
+    margin-top: 0.5rem;
 }
 
-.risk-gauge-container {
-    padding: 2rem;
+.apple-risk-summary {
     display: flex;
-    justify-content: center;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    align-items: center;
+    margin-bottom: 1.5rem;
 }
 
-.risk-gauge {
+.apple-risk-gauge {
     position: relative;
-    width: 230px;
-    height: 230px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-right: 1.5rem;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    border-radius: 50%;
     background: conic-gradient(
         #38b000 0%,
         #38b000 33%, 
@@ -320,170 +530,198 @@ h1, h2, h3, h4, h5, h6 {
         #ef476f 66%,
         #ef476f 100%
     );
-    --risk-percentage: 0%;
 }
 
-.risk-gauge::before {
+.apple-risk-gauge::before {
     content: '';
     position: absolute;
-    width: calc(100% - 30px);
-    height: calc(100% - 30px);
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
     border-radius: 50%;
     background-color: white;
 }
 
-.risk-gauge::after {
+.apple-risk-gauge::after {
     content: '';
     position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(calc((var(--risk-percentage) * 1.8deg) - 90deg));
-    width: 100%;
-    height: 6px;
-    border-radius: 6px;
-    background-color: transparent;
-    display: flex;
-    justify-content: flex-end;
-    transform-origin: left center;
+    width: 4px;
+    height: 50px;
+    background-color: #333;
+    transform-origin: bottom center;
+    border-radius: 4px;
+    bottom: 50%;
+    transform: rotate(calc(var(--risk-degree, 0deg)));
 }
 
-.risk-gauge::after {
-    width: 110px;
-    background-color: #212529;
-}
-
-.risk-value {
+.apple-risk-value {
     position: relative;
-    font-size: 3rem;
+    z-index: 10;
+    font-size: 1.75rem;
     font-weight: 700;
-    z-index: 1;
 }
 
-.risk-level {
-    position: relative;
-    font-size: 1rem;
+.apple-risk-details {
+    flex: 1;
+}
+
+.apple-risk-level {
+    font-size: 1.5rem;
     font-weight: 600;
-    z-index: 1;
-    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
 }
 
-.risk-trend {
-    position: relative;
-    z-index: 1;
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-top: 0.75rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-}
-
-.risk-trend.positive {
-    background-color: rgba(var(--bs-success-rgb), 0.1);
+.apple-risk-level.low {
     color: var(--bs-success);
 }
 
-.risk-trend.negative {
-    background-color: rgba(var(--bs-danger-rgb), 0.1);
-    color: var(--bs-danger);
-}
-
-.risk-gauge.risk-low .risk-value {
-    color: var(--bs-success);
-}
-
-.risk-gauge.risk-medium .risk-value {
+.apple-risk-level.medium {
     color: var(--bs-warning);
 }
 
-.risk-gauge.risk-high .risk-value {
+.apple-risk-level.high {
     color: var(--bs-danger);
 }
 
-.risk-breakdown {
-    padding: 1.5rem;
-}
-
-.risk-breakdown h3 {
-    font-size: 1rem;
+.apple-risk-description {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.5;
     margin-bottom: 1rem;
 }
 
-.risk-factor-grid {
-    display: grid;
-    gap: 0.75rem;
+.apple-risk-factors {
+    margin-top: 1.5rem;
 }
 
-.risk-factor {
+.apple-risk-factors-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #343a40;
+}
+
+.apple-risk-factor {
     display: flex;
     align-items: center;
+    margin-bottom: 0.75rem;
 }
 
-.rf-label {
+.apple-rf-label {
     width: 120px;
     font-size: 0.9rem;
+    color: #495057;
 }
 
-.rf-bar-container {
+.apple-rf-bar-container {
     flex: 1;
-    display: flex;
-    align-items: center;
-    height: 24px;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
 }
 
-.rf-bar {
-    height: 8px;
+.apple-rf-bar {
+    height: 100%;
     background-color: var(--primary-color);
     border-radius: 4px;
 }
 
-.rf-value {
-    margin-left: 0.5rem;
+.apple-rf-value {
+    margin-left: 1rem;
     font-size: 0.85rem;
     font-weight: 500;
     width: 40px;
     text-align: right;
+    color: #495057;
 }
 
-/* Insights Card */
+/* Apple-style AI Insights Card */
 .insights-card {
     background-color: #fff;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
+    padding: 1.5rem;
 }
 
-.insights-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+.apple-insights-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 1.5rem;
 }
 
-.insights-header h2 {
+.apple-insights-title {
     margin: 0;
-    font-size: 1.25rem;
 }
 
-.new-badge {
+.apple-insights-title h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.apple-insights-title h2 i {
+    margin-right: 0.5rem;
+    color: var(--primary-color);
+}
+
+.apple-insights-subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.apple-new-badge {
     background-color: var(--primary-color);
     color: white;
-    font-size: 0.7rem;
-    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.6rem;
     border-radius: 12px;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
 }
 
-#ai-insights-preview {
-    padding: 1.5rem;
+.apple-new-badge i {
+    font-size: 0.7rem;
+    margin-right: 0.25rem;
 }
 
-.insights-intro {
-    margin-bottom: 1.25rem;
+.apple-insights-intro {
+    margin-bottom: 1.5rem;
     color: #495057;
+    line-height: 1.5;
 }
 
-.insights-loading {
+.apple-insights-button {
+    display: block;
+    width: 100%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.apple-insights-button:hover {
+    background-color: #3252d9;
+}
+
+.apple-insights-button i {
+    margin-right: 0.5rem;
+}
+
+.apple-insights-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -492,40 +730,70 @@ h1, h2, h3, h4, h5, h6 {
     color: #6c757d;
 }
 
-.insights-result {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-}
-
-.insights-result h1, 
-.insights-result h2, 
-.insights-result h3 {
-    font-size: 1.1rem;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.insights-result h1:first-child,
-.insights-result h2:first-child,
-.insights-result h3:first-child {
-    margin-top: 0;
-}
-
-.insights-result ul, 
-.insights-result ol {
-    padding-left: 1.5rem;
+.apple-insights-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(67, 97, 238, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
     margin-bottom: 1rem;
 }
 
-.insights-result p {
-    margin-bottom: 0.75rem;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-.insights-footer {
+.apple-insights-result {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.apple-insights-result h1, 
+.apple-insights-result h2, 
+.apple-insights-result h3 {
+    font-size: 1.1rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.apple-insights-result h1:first-child,
+.apple-insights-result h2:first-child,
+.apple-insights-result h3:first-child {
+    margin-top: 0;
+}
+
+.apple-insights-result ul, 
+.apple-insights-result ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.apple-insights-result p {
+    margin-bottom: 1rem;
+}
+
+.apple-insights-footer {
     display: flex;
     justify-content: flex-end;
+}
+
+.apple-insights-more {
+    display: inline-flex;
+    align-items: center;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.apple-insights-more i {
+    margin-left: 0.5rem;
+    font-size: 0.8rem;
 }
 
 /* Recent Data Card */
