@@ -523,12 +523,10 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: center;
     align-items: center;
     background: conic-gradient(
-        #38b000 0%,
-        #38b000 33%, 
-        #f9c74f 33%,
-        #f9c74f 66%,
-        #ef476f 66%,
-        #ef476f 100%
+        var(--gauge-color, var(--primary-color)) 0%,
+        var(--gauge-color, var(--primary-color)) var(--risk-percent, 100%),
+        #e9ecef var(--risk-percent, 100%),
+        #e9ecef 100%
     );
 }
 
@@ -541,23 +539,14 @@ h1, h2, h3, h4, h5, h6 {
     background-color: white;
 }
 
-.apple-risk-gauge::after {
-    content: '';
-    position: absolute;
-    width: 4px;
-    height: 50px;
-    background-color: #333;
-    transform-origin: bottom center;
-    border-radius: 4px;
-    bottom: 50%;
-    transform: rotate(calc(var(--risk-degree, 0deg)));
-}
-
 .apple-risk-value {
     position: relative;
     z-index: 10;
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .apple-risk-details {
@@ -923,26 +912,29 @@ h1, h2, h3, h4, h5, h6 {
 .date-picker-wrapper {
     position: relative;
     display: inline-block;
+    z-index: 1000; /* Ensure wrapper has high z-index */
 }
 
 .custom-calendar-popup {
     display: none;
     position: absolute;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     top: 40px;
-    width: 300px;
+    width: 350px; /* Increased width for better spacing of circular date cells */
     background-color: #fff;
     border-radius: var(--border-radius);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    padding: 1rem;
+    z-index: 9999;
+    padding: 1.5rem;
     animation: fadeIn 0.2s ease;
     user-select: none; /* Prevent text selection */
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .calendar-header {
@@ -991,11 +983,13 @@ h1, h2, h3, h4, h5, h6 {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 3px;
+    justify-content: center;
+    text-align: center;
 }
 
 .calendar-day {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1004,6 +998,8 @@ h1, h2, h3, h4, h5, h6 {
     position: relative;
     font-size: 0.9rem;
     transition: all 0.2s ease;
+    margin: 3px auto;
+    box-sizing: border-box;
 }
 
 .calendar-day:hover:not(.calendar-day-disabled) {
@@ -1024,39 +1020,32 @@ h1, h2, h3, h4, h5, h6 {
     cursor: default;
 }
 
+/* Pastel background colors for risk levels */
 .calendar-day-risk-low {
-    background-color: rgba(var(--bs-success-rgb), 0.1);
+    background-color: rgba(120, 190, 120, 0.15) !important;
 }
 
 .calendar-day-risk-low:hover {
-    background-color: rgba(var(--bs-success-rgb), 0.2);
+    background-color: rgba(120, 190, 120, 0.25) !important;
 }
 
 .calendar-day-risk-medium {
-    background-color: rgba(var(--bs-warning-rgb), 0.1);
+    background-color: rgba(240, 200, 80, 0.15) !important;
 }
 
 .calendar-day-risk-medium:hover {
-    background-color: rgba(var(--bs-warning-rgb), 0.2);
+    background-color: rgba(240, 200, 80, 0.25) !important;
 }
 
 .calendar-day-risk-high {
-    background-color: rgba(var(--bs-danger-rgb), 0.1);
+    background-color: rgba(235, 130, 120, 0.15) !important;
 }
 
 .calendar-day-risk-high:hover {
-    background-color: rgba(var(--bs-danger-rgb), 0.2);
+    background-color: rgba(235, 130, 120, 0.25) !important;
 }
 
-.calendar-day-with-data::after {
-    content: '';
-    position: absolute;
-    bottom: 3px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: var(--primary-color);
-}
+/* Removed indicator dots for cleaner appearance */
 
 .calendar-footer {
     margin-top: 1rem;
