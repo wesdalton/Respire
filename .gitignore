@@ -40,3 +40,12 @@ build/
 
 # Archive folder (old code)
 archive/
+
+# Exclude these folders from Git (keep local only)
+/docs/
+/packages/
+/landing/
+CLEANUP_SUMMARY.md
+PROJECT_COMPLETE.md
+CLAUDE.md
+example.env
