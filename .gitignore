@@ -5,6 +5,7 @@ __pycache__/
 
 # Environment variables
 .env
+.env.local
 
 # Database
 *.db
@@ -28,3 +29,14 @@ Thumbs.db
 # Logs
 *.log
 .vercel
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.pyc
+
+# Archive folder (old code)
+archive/

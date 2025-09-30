@@ -1,0 +1,528 @@
+"""
+Health Metrics and Dashboard API Routes
+Query health data, calculate burnout risk, generate insights
+"""
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, func
+from datetime import date, datetime, timedelta
+from typing import List, Optional
+
+from app.database import get_db
+from app.dependencies import get_current_user
+from app.models import HealthMetric, MoodRating, BurnoutScore, AIInsight
+from app.schemas import (
+    HealthMetricResponse,
+    BurnoutScoreResponse,
+    AIInsightResponse,
+    DashboardResponse,
+    DashboardMetrics
+)
+from app.services.burnout_calculator import burnout_calculator
+from app.services.ai_insights import ai_insights_service
+
+
+router = APIRouter(prefix="/health", tags=["health"])
+
+
+@router.get("/metrics", response_model=List[HealthMetricResponse])
+async def get_health_metrics(
+    start_date: Optional[date] = Query(None, description="Start date"),
+    end_date: Optional[date] = Query(None, description="End date"),
+    limit: int = Query(30, ge=1, le=365),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get health metrics for authenticated user
+
+    Returns metrics sorted by date (most recent first)
+    """
+    query = select(HealthMetric).where(HealthMetric.user_id == user_id)
+
+    if start_date:
+        query = query.where(HealthMetric.date >= start_date)
+    if end_date:
+        query = query.where(HealthMetric.date <= end_date)
+
+    query = query.order_by(HealthMetric.date.desc()).limit(limit)
+
+    result = await db.execute(query)
+    metrics = result.scalars().all()
+
+    return [
+        HealthMetricResponse(
+            id=m.id,
+            user_id=m.user_id,
+            date=m.date,
+            recovery_score=m.recovery_score,
+            resting_hr=m.resting_hr,
+            hrv=m.hrv,
+            sleep_duration_minutes=m.sleep_duration_minutes,
+            sleep_quality_score=m.sleep_quality_score,
+            sleep_latency_minutes=m.sleep_latency_minutes,
+            time_in_bed_minutes=m.time_in_bed_minutes,
+            sleep_consistency_score=m.sleep_consistency_score,
+            day_strain=m.day_strain,
+            workout_count=m.workout_count,
+            average_hr=m.average_hr,
+            max_hr=m.max_hr,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+        for m in metrics
+    ]
+
+
+@router.post("/burnout/calculate", response_model=BurnoutScoreResponse)
+async def calculate_burnout_risk(
+    days: int = Query(14, ge=7, le=90, description="Days to analyze"),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Calculate current burnout risk score
+
+    Analyzes recent health metrics and mood ratings to calculate risk.
+    Stores the result in the database for historical tracking.
+    """
+    start_date = date.today() - timedelta(days=days)
+
+    # Fetch health metrics
+    health_result = await db.execute(
+        select(HealthMetric).where(
+            and_(
+                HealthMetric.user_id == user_id,
+                HealthMetric.date >= start_date
+            )
+        ).order_by(HealthMetric.date)
+    )
+    health_metrics = health_result.scalars().all()
+
+    # Fetch mood ratings
+    mood_result = await db.execute(
+        select(MoodRating).where(
+            and_(
+                MoodRating.user_id == user_id,
+                MoodRating.date >= start_date
+            )
+        ).order_by(MoodRating.date)
+    )
+    mood_ratings = mood_result.scalars().all()
+
+    if not health_metrics and not mood_ratings:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient data to calculate burnout risk. Need at least some health metrics or mood ratings."
+        )
+
+    # Convert to dictionaries for calculator
+    health_dicts = [
+        {
+            "date": m.date,
+            "recovery_score": m.recovery_score,
+            "resting_hr": m.resting_hr,
+            "hrv": m.hrv,
+            "sleep_duration_minutes": m.sleep_duration_minutes,
+            "sleep_quality_score": m.sleep_quality_score,
+            "day_strain": m.day_strain
+        }
+        for m in health_metrics
+    ]
+
+    mood_dicts = [
+        {"date": m.date, "rating": m.rating}
+        for m in mood_ratings
+    ]
+
+    # Calculate risk
+    risk_analysis = burnout_calculator.calculate_overall_risk(
+        health_metrics=health_dicts,
+        mood_ratings=mood_dicts
+    )
+
+    # Store burnout score
+    burnout_score = BurnoutScore(
+        user_id=user_id,
+        date=date.today(),
+        overall_risk_score=risk_analysis["overall_risk_score"],
+        risk_factors=risk_analysis["risk_factors"],
+        confidence_score=risk_analysis["confidence_score"],
+        data_points_used=risk_analysis["data_points_used"]
+    )
+
+    db.add(burnout_score)
+    await db.commit()
+    await db.refresh(burnout_score)
+
+    return BurnoutScoreResponse(
+        id=burnout_score.id,
+        user_id=burnout_score.user_id,
+        date=burnout_score.date,
+        overall_risk_score=burnout_score.overall_risk_score,
+        risk_factors=burnout_score.risk_factors,
+        confidence_score=burnout_score.confidence_score,
+        data_points_used=burnout_score.data_points_used,
+        calculated_at=burnout_score.calculated_at
+    )
+
+
+@router.get("/burnout/history", response_model=List[BurnoutScoreResponse])
+async def get_burnout_history(
+    limit: int = Query(30, ge=1, le=365),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get historical burnout risk scores
+    """
+    result = await db.execute(
+        select(BurnoutScore).where(
+            BurnoutScore.user_id == user_id
+        ).order_by(BurnoutScore.date.desc()).limit(limit)
+    )
+    scores = result.scalars().all()
+
+    return [
+        BurnoutScoreResponse(
+            id=s.id,
+            user_id=s.user_id,
+            date=s.date,
+            overall_risk_score=s.overall_risk_score,
+            risk_factors=s.risk_factors,
+            confidence_score=s.confidence_score,
+            data_points_used=s.data_points_used,
+            calculated_at=s.calculated_at
+        )
+        for s in scores
+    ]
+
+
+@router.post("/insights/generate")
+async def generate_ai_insight(
+    insight_type: str = Query("weekly_summary", description="Type: weekly_summary, burnout_alert, trend_analysis"),
+    days: int = Query(14, ge=7, le=90),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generate AI-powered health insight
+
+    First calculates burnout risk, then generates personalized insight using AI.
+    """
+    start_date = date.today() - timedelta(days=days)
+
+    # Fetch data
+    health_result = await db.execute(
+        select(HealthMetric).where(
+            and_(
+                HealthMetric.user_id == user_id,
+                HealthMetric.date >= start_date
+            )
+        ).order_by(HealthMetric.date)
+    )
+    health_metrics = health_result.scalars().all()
+
+    mood_result = await db.execute(
+        select(MoodRating).where(
+            and_(
+                MoodRating.user_id == user_id,
+                MoodRating.date >= start_date
+            )
+        ).order_by(MoodRating.date)
+    )
+    mood_ratings = mood_result.scalars().all()
+
+    if not health_metrics and not mood_ratings:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient data to generate insights"
+        )
+
+    # Convert to dicts
+    health_dicts = [
+        {
+            "date": m.date,
+            "recovery_score": m.recovery_score,
+            "resting_hr": m.resting_hr,
+            "hrv": m.hrv,
+            "sleep_duration_minutes": m.sleep_duration_minutes,
+            "sleep_quality_score": m.sleep_quality_score,
+            "day_strain": m.day_strain
+        }
+        for m in health_metrics
+    ]
+
+    mood_dicts = [
+        {"date": m.date, "rating": m.rating}
+        for m in mood_ratings
+    ]
+
+    # Calculate burnout risk
+    risk_analysis = burnout_calculator.calculate_overall_risk(
+        health_metrics=health_dicts,
+        mood_ratings=mood_dicts
+    )
+
+    # Generate AI insight
+    insight_data = await ai_insights_service.generate_insight(
+        insight_type=insight_type,
+        health_metrics=health_dicts,
+        mood_ratings=mood_dicts,
+        burnout_analysis=risk_analysis
+    )
+
+    # Store insight
+    ai_insight = AIInsight(
+        user_id=user_id,
+        insight_type=insight_type,
+        date_range_start=start_date,
+        date_range_end=date.today(),
+        title=insight_data["title"],
+        content=insight_data["content"],
+        recommendations={"items": insight_data["recommendations"]},
+        metrics_snapshot=risk_analysis,
+        model_used=insight_data["model_used"],
+        tokens_used=insight_data.get("tokens_used", 0),
+        expires_at=datetime.utcnow() + timedelta(days=7)  # Insights expire after 7 days
+    )
+
+    db.add(ai_insight)
+    await db.commit()
+    await db.refresh(ai_insight)
+
+    return AIInsightResponse(
+        id=ai_insight.id,
+        user_id=ai_insight.user_id,
+        insight_type=ai_insight.insight_type,
+        date_range_start=ai_insight.date_range_start,
+        date_range_end=ai_insight.date_range_end,
+        title=ai_insight.title,
+        content=ai_insight.content,
+        recommendations=ai_insight.recommendations,
+        metrics_snapshot=ai_insight.metrics_snapshot,
+        model_used=ai_insight.model_used,
+        tokens_used=ai_insight.tokens_used,
+        created_at=ai_insight.created_at,
+        expires_at=ai_insight.expires_at,
+        helpful=ai_insight.helpful,
+        user_feedback=ai_insight.user_feedback
+    )
+
+
+@router.get("/insights", response_model=List[AIInsightResponse])
+async def get_ai_insights(
+    limit: int = Query(10, ge=1, le=50),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get recent AI insights (not expired)
+    """
+    result = await db.execute(
+        select(AIInsight).where(
+            and_(
+                AIInsight.user_id == user_id,
+                AIInsight.expires_at > datetime.utcnow()
+            )
+        ).order_by(AIInsight.created_at.desc()).limit(limit)
+    )
+    insights = result.scalars().all()
+
+    return [
+        AIInsightResponse(
+            id=i.id,
+            user_id=i.user_id,
+            insight_type=i.insight_type,
+            date_range_start=i.date_range_start,
+            date_range_end=i.date_range_end,
+            title=i.title,
+            content=i.content,
+            recommendations=i.recommendations,
+            metrics_snapshot=i.metrics_snapshot,
+            model_used=i.model_used,
+            tokens_used=i.tokens_used,
+            created_at=i.created_at,
+            expires_at=i.expires_at,
+            helpful=i.helpful,
+            user_feedback=i.user_feedback
+        )
+        for i in insights
+    ]
+
+
+@router.get("/dashboard", response_model=DashboardResponse)
+async def get_dashboard(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get complete dashboard data
+
+    Returns summary metrics, recent data, latest burnout score, and latest insight.
+    """
+    # Get latest health metrics (last 7 days)
+    seven_days_ago = date.today() - timedelta(days=7)
+
+    health_result = await db.execute(
+        select(HealthMetric).where(
+            and_(
+                HealthMetric.user_id == user_id,
+                HealthMetric.date >= seven_days_ago
+            )
+        ).order_by(HealthMetric.date.desc()).limit(7)
+    )
+    health_metrics = list(health_result.scalars().all())
+
+    # Get latest mood ratings
+    mood_result = await db.execute(
+        select(MoodRating).where(
+            and_(
+                MoodRating.user_id == user_id,
+                MoodRating.date >= seven_days_ago
+            )
+        ).order_by(MoodRating.date.desc()).limit(7)
+    )
+    mood_ratings = list(mood_result.scalars().all())
+
+    # Get latest burnout score
+    burnout_result = await db.execute(
+        select(BurnoutScore).where(
+            BurnoutScore.user_id == user_id
+        ).order_by(BurnoutScore.date.desc()).limit(1)
+    )
+    latest_burnout = burnout_result.scalar_one_or_none()
+
+    # Get latest insight
+    insight_result = await db.execute(
+        select(AIInsight).where(
+            and_(
+                AIInsight.user_id == user_id,
+                AIInsight.expires_at > datetime.utcnow()
+            )
+        ).order_by(AIInsight.created_at.desc()).limit(1)
+    )
+    latest_insight = insight_result.scalar_one_or_none()
+
+    # Count pending sync jobs (placeholder - we'll implement later)
+    pending_sync_jobs = 0
+
+    # Build dashboard metrics
+    latest_metric = health_metrics[0] if health_metrics else None
+    latest_mood = mood_ratings[0] if mood_ratings else None
+
+    # Determine burnout trend
+    burnout_trend = None
+    if latest_burnout:
+        # Get previous burnout score to compare
+        prev_burnout_result = await db.execute(
+            select(BurnoutScore).where(
+                and_(
+                    BurnoutScore.user_id == user_id,
+                    BurnoutScore.date < latest_burnout.date
+                )
+            ).order_by(BurnoutScore.date.desc()).limit(1)
+        )
+        prev_burnout = prev_burnout_result.scalar_one_or_none()
+
+        if prev_burnout:
+            if latest_burnout.overall_risk_score < prev_burnout.overall_risk_score:
+                burnout_trend = "improving"
+            elif latest_burnout.overall_risk_score > prev_burnout.overall_risk_score:
+                burnout_trend = "worsening"
+            else:
+                burnout_trend = "stable"
+
+    metrics = DashboardMetrics(
+        latest_recovery=latest_metric.recovery_score if latest_metric else None,
+        latest_hrv=latest_metric.hrv if latest_metric else None,
+        latest_resting_hr=latest_metric.resting_hr if latest_metric else None,
+        latest_strain=latest_metric.day_strain if latest_metric else None,
+        latest_sleep_quality=latest_metric.sleep_quality_score if latest_metric else None,
+        latest_mood=latest_mood.rating if latest_mood else None,
+        burnout_risk_score=latest_burnout.overall_risk_score if latest_burnout else None,
+        burnout_trend=burnout_trend,
+        days_tracked=len(health_metrics),
+        last_sync=health_metrics[0].created_at if health_metrics else None
+    )
+
+    # Convert to response schemas
+    recent_health_data = [
+        HealthMetricResponse(
+            id=m.id,
+            user_id=m.user_id,
+            date=m.date,
+            recovery_score=m.recovery_score,
+            resting_hr=m.resting_hr,
+            hrv=m.hrv,
+            sleep_duration_minutes=m.sleep_duration_minutes,
+            sleep_quality_score=m.sleep_quality_score,
+            sleep_latency_minutes=m.sleep_latency_minutes,
+            time_in_bed_minutes=m.time_in_bed_minutes,
+            sleep_consistency_score=m.sleep_consistency_score,
+            day_strain=m.day_strain,
+            workout_count=m.workout_count,
+            average_hr=m.average_hr,
+            max_hr=m.max_hr,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+        for m in health_metrics
+    ]
+
+    from app.schemas import MoodRatingResponse
+    recent_moods = [
+        MoodRatingResponse(
+            id=m.id,
+            user_id=m.user_id,
+            date=m.date,
+            rating=m.rating,
+            notes=m.notes,
+            created_at=m.created_at,
+            updated_at=m.updated_at
+        )
+        for m in mood_ratings
+    ]
+
+    latest_burnout_response = None
+    if latest_burnout:
+        latest_burnout_response = BurnoutScoreResponse(
+            id=latest_burnout.id,
+            user_id=latest_burnout.user_id,
+            date=latest_burnout.date,
+            overall_risk_score=latest_burnout.overall_risk_score,
+            risk_factors=latest_burnout.risk_factors,
+            confidence_score=latest_burnout.confidence_score,
+            data_points_used=latest_burnout.data_points_used,
+            calculated_at=latest_burnout.calculated_at
+        )
+
+    latest_insight_response = None
+    if latest_insight:
+        latest_insight_response = AIInsightResponse(
+            id=latest_insight.id,
+            user_id=latest_insight.user_id,
+            insight_type=latest_insight.insight_type,
+            date_range_start=latest_insight.date_range_start,
+            date_range_end=latest_insight.date_range_end,
+            title=latest_insight.title,
+            content=latest_insight.content,
+            recommendations=latest_insight.recommendations,
+            metrics_snapshot=latest_insight.metrics_snapshot,
+            model_used=latest_insight.model_used,
+            tokens_used=latest_insight.tokens_used,
+            created_at=latest_insight.created_at,
+            expires_at=latest_insight.expires_at,
+            helpful=latest_insight.helpful,
+            user_feedback=latest_insight.user_feedback
+        )
+
+    return DashboardResponse(
+        user_id=user_id,
+        metrics=metrics,
+        recent_health_data=recent_health_data,
+        recent_moods=recent_moods,
+        latest_burnout_score=latest_burnout_response,
+        latest_insight=latest_insight_response,
+        pending_sync_jobs=pending_sync_jobs
+    )
