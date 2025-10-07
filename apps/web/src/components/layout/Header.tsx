@@ -1,6 +1,7 @@
 import React from 'react';
 import { Activity, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { Avatar } from '../common/Avatar';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -40,10 +41,19 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* Right side: User Info and Logout */}
         <div className="flex items-center space-x-4">
-          {user?.email && (
-            <span className="hidden sm:inline-block text-sm text-gray-600">
-              {user.email}
-            </span>
+          {user && (
+            <div className="hidden sm:flex items-center space-x-3">
+              <Avatar
+                src={user.user_metadata?.profile_picture_url}
+                alt={user.user_metadata?.first_name || user.email}
+                size="sm"
+              />
+              <span className="text-sm text-gray-900 font-semibold">
+                {user.user_metadata?.first_name && user.user_metadata?.last_name
+                  ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+                  : user.user_metadata?.first_name || user.email}
+              </span>
+            </div>
           )}
           <button
             onClick={handleSignout}

@@ -2,10 +2,13 @@
 Authentication API Routes
 User registration, login, logout, and profile management
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
+import os
+import uuid
+from pathlib import Path
 
 from app.services.supabase_auth import supabase_auth
 from app.dependencies import get_current_user
@@ -22,6 +25,7 @@ class SignUpRequest(BaseModel):
     password: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
 
 class SignInRequest(BaseModel):
@@ -46,6 +50,12 @@ class UserResponse(BaseModel):
     email: str
     user_metadata: Dict[str, Any]
     created_at: str
+
+
+class UpdateProfileRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    profile_picture_url: Optional[str] = None
 
 
 class SignUpResponse(BaseModel):
@@ -73,6 +83,8 @@ async def sign_up(request: SignUpRequest):
             metadata["first_name"] = request.first_name
         if request.last_name:
             metadata["last_name"] = request.last_name
+        if request.profile_picture_url:
+            metadata["profile_picture_url"] = request.profile_picture_url
 
         # Create user with Supabase
         result = await supabase_auth.sign_up(
@@ -218,6 +230,92 @@ async def get_current_user_profile(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch user profile: {str(e)}"
+        )
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_profile(
+    request: UpdateProfileRequest,
+    user_id: str = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Update current user profile
+
+    Updates user metadata (first_name, last_name, profile_picture_url)
+    """
+    try:
+        # Get the access token
+        token = credentials.credentials
+
+        # Prepare metadata update
+        metadata = {}
+        if request.first_name is not None:
+            metadata["first_name"] = request.first_name
+        if request.last_name is not None:
+            metadata["last_name"] = request.last_name
+        if request.profile_picture_url is not None:
+            metadata["profile_picture_url"] = request.profile_picture_url
+
+        # Update user metadata with Supabase
+        updated_user = await supabase_auth.update_user(token, metadata)
+
+        return UserResponse(
+            id=updated_user.get("id", user_id),
+            email=updated_user.get("email", ""),
+            user_metadata=updated_user.get("user_metadata", {}),
+            created_at=updated_user.get("created_at", "")
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile: {str(e)}"
+        )
+
+
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Upload profile picture
+
+    Uploads an image file and returns the URL
+    """
+    try:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File must be an image"
+            )
+
+        # Generate unique filename
+        file_ext = Path(file.filename or 'image.jpg').suffix
+        unique_filename = f"{user_id}_{uuid.uuid4()}{file_ext}"
+
+        # Create uploads directory if it doesn't exist
+        upload_dir = Path("uploads/profile-pictures")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save file
+        file_path = upload_dir / unique_filename
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+
+        # Return URL (relative path for now)
+        # In production, this would be a full URL to cloud storage
+        file_url = f"/uploads/profile-pictures/{unique_filename}"
+
+        return {"url": file_url}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
         )
 
 

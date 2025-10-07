@@ -174,6 +174,40 @@ class SupabaseAuthService:
             response.raise_for_status()
             return response.json()
 
+    async def update_user(
+        self,
+        access_token: str,
+        metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update user metadata
+
+        Args:
+            access_token: User's access token
+            metadata: User metadata to update
+
+        Returns:
+            Updated user data
+
+        Raises:
+            httpx.HTTPStatusError: If update fails
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{self.auth_url}/user",
+                json={
+                    "data": metadata
+                },
+                headers={
+                    "apikey": self.supabase_anon_key,
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+            )
+
+            response.raise_for_status()
+            return response.json()
+
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
         Verify JWT token and extract payload

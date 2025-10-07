@@ -10,7 +10,12 @@ export interface AuthResponse {
 export interface User {
   id: string;
   email: string;
-  user_metadata?: Record<string, any>;
+  user_metadata?: {
+    first_name?: string;
+    last_name?: string;
+    profile_picture_url?: string;
+    [key: string]: any;
+  };
   created_at?: string;
 }
 

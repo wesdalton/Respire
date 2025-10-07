@@ -73,12 +73,13 @@ class APIClient {
   }
 
   // Auth endpoints
-  async signup(email: string, password: string, firstName?: string, lastName?: string) {
+  async signup(email: string, password: string, firstName?: string, lastName?: string, profilePictureUrl?: string) {
     const { data } = await this.client.post<any>('/auth/signup', {
       email,
       password,
       first_name: firstName,
       last_name: lastName,
+      profile_picture_url: profilePictureUrl,
     });
 
     // Check if email confirmation is required
@@ -114,6 +115,25 @@ class APIClient {
     return data;
   }
 
+  async updateProfile(profile: { first_name?: string; last_name?: string; profile_picture_url?: string }) {
+    const { data } = await this.client.put('/auth/me', profile);
+    return data;
+  }
+
+  async uploadProfilePicture(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const { data } = await this.client.post<{ url: string }>('/auth/upload-profile-picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Return full URL
+    return `${API_URL}${data.url}`;
+  }
+
   // Dashboard
   async getDashboard(): Promise<DashboardData> {
     const { data } = await this.client.get<DashboardData>('/health/dashboard');
@@ -137,7 +157,7 @@ class APIClient {
   }
 
   async createMoodRating(params: { date: string; rating: number; notes?: string }): Promise<MoodRating> {
-    const { data} = await this.client.post<MoodRating>('/mood/', params);
+    const { data } = await this.client.post<MoodRating>('/mood/', params);
     return data;
   }
 

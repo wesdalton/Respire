@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signin: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+  signup: (email: string, password: string, firstName?: string, lastName?: string, profilePictureUrl?: string) => Promise<void>;
   signout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -44,8 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(response.user);
   };
 
-  const signup = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const response = await apiClient.signup(email, password, firstName, lastName);
+  const signup = async (email: string, password: string, firstName?: string, lastName?: string, profilePictureUrl?: string) => {
+    const response = await apiClient.signup(email, password, firstName, lastName, profilePictureUrl);
 
     // Check if email confirmation is required
     if (response.requires_confirmation) {

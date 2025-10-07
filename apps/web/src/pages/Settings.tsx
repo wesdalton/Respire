@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/api';
-import { User, Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
+import { Avatar } from '../components/common/Avatar';
 import type { WHOOPConnection } from '../types';
 
 export default function Settings() {
@@ -11,6 +12,15 @@ export default function Settings() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedFirstName, setEditedFirstName] = useState('');
+  const [editedLastName, setEditedLastName] = useState('');
+  const [editedProfilePictureUrl, setEditedProfilePictureUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     loadWhoopConnection();
@@ -71,6 +81,81 @@ export default function Settings() {
     }
   };
 
+  const handleEditProfile = () => {
+    setEditedFirstName(user?.user_metadata?.first_name || '');
+    setEditedLastName(user?.user_metadata?.last_name || '');
+    setEditedProfilePictureUrl(user?.user_metadata?.profile_picture_url || '');
+    setPreviewUrl(user?.user_metadata?.profile_picture_url || '');
+    setIsEditingProfile(true);
+    setError('');
+    setSuccessMessage('');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditedFirstName('');
+    setEditedLastName('');
+    setEditedProfilePictureUrl('');
+    setSelectedFile(null);
+    setPreviewUrl('');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      setSelectedFile(file);
+      setError('');
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSavingProfile(true);
+      setError('');
+
+      // If a file was selected, upload it first
+      let profilePictureUrl = editedProfilePictureUrl;
+      if (selectedFile) {
+        const uploadedUrl = await apiClient.uploadProfilePicture(selectedFile);
+        profilePictureUrl = uploadedUrl;
+      }
+
+      await apiClient.updateProfile({
+        first_name: editedFirstName,
+        last_name: editedLastName,
+        profile_picture_url: profilePictureUrl,
+      });
+      setSuccessMessage('Profile updated successfully!');
+      setIsEditingProfile(false);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      // Reload the page to fetch updated user data
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -98,41 +183,128 @@ export default function Settings() {
         <div className="space-y-6">
           {/* Account Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <User className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Avatar
+                  src={user?.user_metadata?.profile_picture_url}
+                  alt={user?.user_metadata?.first_name || user?.email}
+                  size="md"
+                />
+                <h2 className="text-xl font-semibold text-gray-900">Account</h2>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">Account</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                <p className="text-gray-900">{user?.email || 'Not available'}</p>
-              </div>
-
-              {user?.user_metadata?.first_name && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Name</label>
-                  <p className="text-gray-900">
-                    {user.user_metadata.first_name} {user.user_metadata.last_name || ''}
-                  </p>
-                </div>
-              )}
-
-              {user?.created_at && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Member Since</label>
-                  <p className="text-gray-900">
-                    {new Date(user.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
+              {!isEditingProfile && (
+                <button
+                  onClick={handleEditProfile}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
+                >
+                  Edit Profile
+                </button>
               )}
             </div>
+
+            {isEditingProfile ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editedFirstName}
+                      onChange={(e) => setEditedFirstName(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editedLastName}
+                      onChange={(e) => setEditedLastName(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profile Picture <span className="text-gray-400 text-xs">(optional)</span>
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {previewUrl && (
+                      <Avatar src={previewUrl} alt="Preview" size="lg" />
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-lg file:border-0
+                          file:text-sm file:font-medium
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100
+                          file:cursor-pointer cursor-pointer"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Upload an image (max 5MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    <Save className="w-4 h-4" />
+                    {savingProfile ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={savingProfile}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                  <p className="text-gray-900">{user?.email || 'Not available'}</p>
+                </div>
+
+                {user?.user_metadata?.first_name && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Name</label>
+                    <p className="text-gray-900">
+                      {user.user_metadata.first_name} {user.user_metadata.last_name || ''}
+                    </p>
+                  </div>
+                )}
+
+                {user?.created_at && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Member Since</label>
+                    <p className="text-gray-900">
+                      {new Date(user.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* WHOOP Connection Section */}

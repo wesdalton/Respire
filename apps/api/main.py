@@ -7,8 +7,10 @@ load_dotenv()  # Load environment variables from .env file
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 from app.database import init_db, close_db, engine
 from app.routers import whoop, auth, mood, health
@@ -64,6 +66,11 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(whoop.router, prefix="/api")
 app.include_router(mood.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
+
+# Mount static files for uploads
+uploads_dir = Path("uploads")
+uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")

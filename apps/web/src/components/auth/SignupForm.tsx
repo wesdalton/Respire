@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { apiClient } from '../../services/api';
+import { Avatar } from '../common/Avatar';
 
 export function SignupForm() {
   const [email, setEmail] = useState('');
@@ -9,11 +11,40 @@ export function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      setSelectedFile(file);
+      setError('');
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +64,13 @@ export function SignupForm() {
     setLoading(true);
 
     try {
-      await signup(email, password, firstName, lastName);
+      // Upload profile picture if selected
+      let profilePictureUrl = '';
+      if (selectedFile) {
+        profilePictureUrl = await apiClient.uploadProfilePicture(selectedFile);
+      }
+
+      await signup(email, password, firstName, lastName, profilePictureUrl);
       navigate('/dashboard');
     } catch (err: any) {
       const errorData = err.response?.data;
@@ -115,6 +152,35 @@ export function SignupForm() {
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
+            </div>
+
+            <div>
+              <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700 mb-2">
+                Profile Picture <span className="text-gray-400 text-xs">(optional)</span>
+              </label>
+              <div className="flex items-center gap-4">
+                {previewUrl && (
+                  <Avatar src={previewUrl} alt="Preview" size="lg" />
+                )}
+                <div className="flex-1">
+                  <input
+                    id="profilePicture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0
+                      file:text-sm file:font-medium
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      file:cursor-pointer cursor-pointer"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Upload an image (max 5MB)
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>
