@@ -105,7 +105,7 @@ async def whoop_callback(
         await db.commit()
         await db.refresh(connection)
 
-        # Trigger initial sync in the background (last 7 days)
+        # Trigger initial sync in the background (last 90 days)
         print(f"✅ WHOOP connected successfully, triggering initial sync...")
         try:
             from datetime import timedelta
@@ -117,8 +117,8 @@ async def whoop_callback(
                 expires_at=token_data["expires_at"]
             )
 
-            # Fetch last 7 days of data
-            start_date = date.today() - timedelta(days=7)
+            # Fetch last 90 days of data
+            start_date = date.today() - timedelta(days=90)
             end_date = date.today()
 
             data = await sync_client.sync_all_data(start_date, end_date)

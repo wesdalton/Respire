@@ -7,7 +7,7 @@ interface MoodHistoryProps {
   onDelete?: (moodDate: string) => void;
 }
 
-const MOOD_EMOJIS = ['😢', '😟', '😐', '🙂', '😊', '😃', '🤗', '😄', '🥳', '🤩'];
+const MOOD_EMOJIS = ['😢', '😔', '😟', '😕', '😐', '🙂', '😊', '😄', '🥳', '🤩'];
 
 export default function MoodHistory({ moods, onEdit, onDelete }: MoodHistoryProps) {
   const formatDate = (dateString: string) => {

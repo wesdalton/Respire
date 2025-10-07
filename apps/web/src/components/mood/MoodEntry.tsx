@@ -7,7 +7,7 @@ interface MoodEntryProps {
   isEditing?: boolean;
 }
 
-const MOOD_EMOJIS = ['😢', '😟', '😐', '🙂', '😊', '😃', '🤗', '😄', '🥳', '🤩'];
+const MOOD_EMOJIS = ['😢', '😔', '😟', '😕', '😐', '🙂', '😊', '😄', '🥳', '🤩'];
 
 export default function MoodEntry({ onSubmit, initialRating, initialNotes, isEditing }: MoodEntryProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(initialRating ?? null);
