@@ -105,6 +105,61 @@ async def whoop_callback(
         await db.commit()
         await db.refresh(connection)
 
+        # Trigger initial sync in the background (last 7 days)
+        print(f"✅ WHOOP connected successfully, triggering initial sync...")
+        try:
+            from datetime import timedelta
+
+            # Create WHOOP client for syncing
+            sync_client = create_whoop_client(
+                access_token=token_data["access_token"],
+                refresh_token=token_data.get("refresh_token"),
+                expires_at=token_data["expires_at"]
+            )
+
+            # Fetch last 7 days of data
+            start_date = date.today() - timedelta(days=7)
+            end_date = date.today()
+
+            data = await sync_client.sync_all_data(start_date, end_date)
+
+            # Transform and store health metrics
+            health_metrics = whoop_transformer.transform_sync_data(
+                user_id=user_id,
+                whoop_data=data
+            )
+
+            records_inserted = 0
+            for metric_data in health_metrics:
+                # Check if record exists
+                existing = await db.execute(
+                    select(HealthMetric).where(
+                        HealthMetric.user_id == user_id,
+                        HealthMetric.date == metric_data["date"]
+                    )
+                )
+                existing_metric = existing.scalar_one_or_none()
+
+                if not existing_metric:
+                    # Insert new record
+                    new_metric = HealthMetric(**metric_data)
+                    db.add(new_metric)
+                    records_inserted += 1
+
+            # Update last synced timestamp
+            connection.last_synced_at = datetime.utcnow()
+            await db.commit()
+
+            print(f"✅ Initial sync complete: {records_inserted} records inserted")
+
+        except Exception as sync_error:
+            # Don't fail the connection if sync fails - user can manually sync
+            print(f"⚠️  Initial sync failed (non-critical): {str(sync_error)}")
+            # Rollback any partial sync changes but keep the connection
+            await db.rollback()
+            # Re-commit just the connection
+            await db.commit()
+
         return WHOOPConnectionResponse(
             id=connection.id,
             user_id=connection.user_id,
