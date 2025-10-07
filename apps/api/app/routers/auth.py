@@ -3,11 +3,14 @@ Authentication API Routes
 User registration, login, logout, and profile management
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 
 from app.services.supabase_auth import supabase_auth
 from app.dependencies import get_current_user
+
+security = HTTPBearer()
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -45,7 +48,17 @@ class UserResponse(BaseModel):
     created_at: str
 
 
-@router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+class SignUpResponse(BaseModel):
+    message: str
+    requires_confirmation: bool
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    expires_in: Optional[int] = None
+    token_type: str = "Bearer"
+    user: Optional[Dict[str, Any]] = None
+
+
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def sign_up(request: SignUpRequest):
     """
     Register a new user
@@ -68,6 +81,16 @@ async def sign_up(request: SignUpRequest):
             metadata=metadata
         )
 
+        # Check if email confirmation is required
+        # If access_token is missing, email confirmation is required
+        if "access_token" not in result or not result.get("access_token"):
+            return SignUpResponse(
+                message="Registration successful! Please check your email to confirm your account.",
+                requires_confirmation=True,
+                user=result.get("user")
+            )
+
+        # Auto-confirmed, return tokens
         return AuthResponse(
             access_token=result["access_token"],
             refresh_token=result["refresh_token"],
@@ -168,20 +191,27 @@ async def refresh_token(request: RefreshTokenRequest):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(user_id: str = Depends(get_current_user)):
+async def get_current_user_profile(
+    user_id: str = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     """
     Get current user profile
 
     Returns authenticated user's profile information.
     """
     try:
-        # In production, fetch from database
-        # For now, return basic info from JWT
+        # Get the access token to fetch full user profile from Supabase
+        token = credentials.credentials
+
+        # Fetch user profile from Supabase
+        user_data = await supabase_auth.get_user(token)
+
         return UserResponse(
-            id=user_id,
-            email="user@example.com",  # Will be populated from token
-            user_metadata={},
-            created_at="2024-01-01T00:00:00Z"
+            id=user_data.get("id", user_id),
+            email=user_data.get("email", ""),
+            user_metadata=user_data.get("user_metadata", {}),
+            created_at=user_data.get("created_at", "")
         )
 
     except Exception as e:

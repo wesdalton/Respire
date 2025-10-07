@@ -2,6 +2,9 @@
 Respire API - FastAPI Backend
 Production-ready health analytics platform
 """
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -80,8 +83,9 @@ async def health_check():
     db_status = "ok"
     try:
         # Test database connection
+        from sqlalchemy import text
         async with engine.connect() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
     except Exception as e:
         db_status = f"error: {str(e)}"
 

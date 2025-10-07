@@ -68,7 +68,7 @@ class MoodRatingBase(BaseModel):
 
 
 class MoodRatingCreate(MoodRatingBase):
-    user_id: UUID
+    pass  # user_id comes from authentication, not from request body
 
 
 class MoodRatingUpdate(BaseModel):

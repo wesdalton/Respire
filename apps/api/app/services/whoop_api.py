@@ -84,6 +84,9 @@ class WHOOPAPIClient:
                 json=json_data
             )
 
+            if response.status_code >= 400:
+                print(f"❌ WHOOP API Error: {response.status_code} - {url}")
+
             response.raise_for_status()
             return response.json()
 
@@ -102,7 +105,7 @@ class WHOOPAPIClient:
         self,
         start: Optional[date] = None,
         end: Optional[date] = None,
-        limit: int = 25,
+        limit: int = 10,
         next_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -120,9 +123,13 @@ class WHOOPAPIClient:
         params = {"limit": limit}
 
         if start:
-            params["start"] = start.isoformat()
+            # Convert date to datetime at start of day (midnight UTC)
+            start_dt = datetime.combine(start, datetime.min.time())
+            params["start"] = start_dt.isoformat() + "Z"
         if end:
-            params["end"] = end.isoformat()
+            # Convert date to datetime at end of day (midnight UTC next day)
+            end_dt = datetime.combine(end, datetime.max.time()).replace(microsecond=0)
+            params["end"] = end_dt.isoformat() + "Z"
         if next_token:
             params["nextToken"] = next_token
 
@@ -145,7 +152,7 @@ class WHOOPAPIClient:
         self,
         start: Optional[date] = None,
         end: Optional[date] = None,
-        limit: int = 25,
+        limit: int = 10,
         next_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -163,9 +170,13 @@ class WHOOPAPIClient:
         params = {"limit": limit}
 
         if start:
-            params["start"] = start.isoformat()
+            # Convert date to datetime at start of day (midnight UTC)
+            start_dt = datetime.combine(start, datetime.min.time())
+            params["start"] = start_dt.isoformat() + "Z"
         if end:
-            params["end"] = end.isoformat()
+            # Convert date to datetime at end of day (midnight UTC next day)
+            end_dt = datetime.combine(end, datetime.max.time()).replace(microsecond=0)
+            params["end"] = end_dt.isoformat() + "Z"
         if next_token:
             params["nextToken"] = next_token
 
@@ -184,11 +195,22 @@ class WHOOPAPIClient:
         return await self._make_request("GET", f"cycle/{cycle_id}/recovery")
 
     # Sleep Endpoints
+    async def get_sleep_by_cycle_id(self, cycle_id: str) -> Dict[str, Any]:
+        """
+        Get sleep for specific cycle
+
+        Args:
+            cycle_id: Cycle ID
+
+        Returns:
+            Sleep data for that cycle
+        """
+        return await self._make_request("GET", f"cycle/{cycle_id}/sleep")
     async def get_sleep(
         self,
         start: Optional[date] = None,
         end: Optional[date] = None,
-        limit: int = 25,
+        limit: int = 10,
         next_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -206,13 +228,17 @@ class WHOOPAPIClient:
         params = {"limit": limit}
 
         if start:
-            params["start"] = start.isoformat()
+            # Convert date to datetime at start of day (midnight UTC)
+            start_dt = datetime.combine(start, datetime.min.time())
+            params["start"] = start_dt.isoformat() + "Z"
         if end:
-            params["end"] = end.isoformat()
+            # Convert date to datetime at end of day (midnight UTC next day)
+            end_dt = datetime.combine(end, datetime.max.time()).replace(microsecond=0)
+            params["end"] = end_dt.isoformat() + "Z"
         if next_token:
             params["nextToken"] = next_token
 
-        return await self._make_request("GET", "sleep", params=params)
+        return await self._make_request("GET", "activity/sleep", params=params)
 
     async def get_sleep_by_id(self, sleep_id: str) -> Dict[str, Any]:
         """
@@ -224,14 +250,14 @@ class WHOOPAPIClient:
         Returns:
             Sleep data
         """
-        return await self._make_request("GET", f"sleep/{sleep_id}")
+        return await self._make_request("GET", f"activity/sleep/{sleep_id}")
 
     # Workout Endpoints
     async def get_workouts(
         self,
         start: Optional[date] = None,
         end: Optional[date] = None,
-        limit: int = 25,
+        limit: int = 10,
         next_token: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -249,13 +275,17 @@ class WHOOPAPIClient:
         params = {"limit": limit}
 
         if start:
-            params["start"] = start.isoformat()
+            # Convert date to datetime at start of day (midnight UTC)
+            start_dt = datetime.combine(start, datetime.min.time())
+            params["start"] = start_dt.isoformat() + "Z"
         if end:
-            params["end"] = end.isoformat()
+            # Convert date to datetime at end of day (midnight UTC next day)
+            end_dt = datetime.combine(end, datetime.max.time()).replace(microsecond=0)
+            params["end"] = end_dt.isoformat() + "Z"
         if next_token:
             params["nextToken"] = next_token
 
-        return await self._make_request("GET", "workout", params=params)
+        return await self._make_request("GET", "activity/workout", params=params)
 
     async def get_workout_by_id(self, workout_id: str) -> Dict[str, Any]:
         """
@@ -267,38 +297,20 @@ class WHOOPAPIClient:
         Returns:
             Workout data
         """
-        return await self._make_request("GET", f"workout/{workout_id}")
+        return await self._make_request("GET", f"activity/workout/{workout_id}")
 
     # Body Measurement Endpoints
-    async def get_body_measurement(
-        self,
-        start: Optional[date] = None,
-        end: Optional[date] = None,
-        limit: int = 25,
-        next_token: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def get_body_measurement(self) -> Dict[str, Any]:
         """
-        Get body measurement data
+        Get body measurement data (height, weight, max heart rate)
 
-        Args:
-            start: Start date
-            end: End date
-            limit: Number of records (max 50)
-            next_token: Pagination token
+        Note: According to WHOOP API v2 docs, this endpoint does not support
+        date filtering or pagination. It returns the current body measurements.
 
         Returns:
-            List of body measurement records
+            Body measurement data (height_meter, weight_kilogram, max_heart_rate)
         """
-        params = {"limit": limit}
-
-        if start:
-            params["start"] = start.isoformat()
-        if end:
-            params["end"] = end.isoformat()
-        if next_token:
-            params["nextToken"] = next_token
-
-        return await self._make_request("GET", "body_measurement", params=params)
+        return await self._make_request("GET", "user/measurement/body")
 
     # Convenience Methods
     async def sync_all_data(
@@ -319,11 +331,11 @@ class WHOOPAPIClient:
         if not end_date:
             end_date = date.today()
 
-        # Fetch all data types in parallel
-        cycles_data = await self.get_cycles(start=start_date, end=end_date, limit=50)
-        recovery_data = await self.get_recovery(start=start_date, end=end_date, limit=50)
-        sleep_data = await self.get_sleep(start=start_date, end=end_date, limit=50)
-        workout_data = await self.get_workouts(start=start_date, end=end_date, limit=50)
+        # Fetch all data types in parallel (max limit is 25 per WHOOP API)
+        cycles_data = await self.get_cycles(start=start_date, end=end_date, limit=25)
+        recovery_data = await self.get_recovery(start=start_date, end=end_date, limit=25)
+        sleep_data = await self.get_sleep(start=start_date, end=end_date, limit=25)
+        workout_data = await self.get_workouts(start=start_date, end=end_date, limit=25)
 
         return {
             "cycles": cycles_data.get("records", []),

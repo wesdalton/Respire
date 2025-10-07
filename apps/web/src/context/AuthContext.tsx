@@ -19,11 +19,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check if user is already authenticated
-    if (apiClient.isAuthenticated()) {
-      // In a real app, you'd fetch the user profile here
-      setUser({ id: 'current-user', email: 'user@example.com' });
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          const userData = await apiClient.getCurrentUser();
+          setUser(userData);
+        } catch (error: any) {
+          console.error('Failed to fetch user:', error);
+          // Only clear token if it's actually invalid (401), not network errors
+          if (error.response?.status === 401) {
+            apiClient.clearToken();
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const signin = async (email: string, password: string) => {
@@ -33,6 +46,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (email: string, password: string, firstName?: string, lastName?: string) => {
     const response = await apiClient.signup(email, password, firstName, lastName);
+
+    // Check if email confirmation is required
+    if (response.requires_confirmation) {
+      // Throw a special error that includes the confirmation message
+      throw {
+        response: {
+          data: response
+        }
+      };
+    }
+
     setUser(response.user);
   };
 

@@ -160,6 +160,9 @@ async def update_mood_rating(
     """
     Update existing mood rating for a specific date
     """
+    print(f"📝 Updating mood for date: {mood_date}")
+    print(f"   Update data: rating={update.rating}, notes={update.notes}")
+
     result = await db.execute(
         select(MoodRating).where(
             and_(

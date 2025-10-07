@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 import type { AuthResponse, DashboardData, HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -74,12 +74,20 @@ class APIClient {
 
   // Auth endpoints
   async signup(email: string, password: string, firstName?: string, lastName?: string) {
-    const { data } = await this.client.post<AuthResponse>('/auth/signup', {
+    const { data } = await this.client.post<any>('/auth/signup', {
       email,
       password,
       first_name: firstName,
       last_name: lastName,
     });
+
+    // Check if email confirmation is required
+    if (data.requires_confirmation) {
+      // Return the response without setting tokens
+      return data;
+    }
+
+    // Auto-confirmed, set tokens
     this.setToken(data.access_token, data.refresh_token);
     return data;
   }
@@ -99,6 +107,11 @@ class APIClient {
     } finally {
       this.clearToken();
     }
+  }
+
+  async getCurrentUser() {
+    const { data } = await this.client.get('/auth/me');
+    return data;
   }
 
   // Dashboard
@@ -123,12 +136,8 @@ class APIClient {
     return data;
   }
 
-  async createMoodRating(date: string, rating: number, notes?: string): Promise<MoodRating> {
-    const { data} = await this.client.post<MoodRating>('/mood/', {
-      date,
-      rating,
-      notes,
-    });
+  async createMoodRating(params: { date: string; rating: number; notes?: string }): Promise<MoodRating> {
+    const { data} = await this.client.post<MoodRating>('/mood/', params);
     return data;
   }
 

@@ -17,13 +17,12 @@ DATABASE_URL = os.getenv(
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# Create async engine
+# Create async engine - simple configuration
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # Set to True for SQL logging
+    echo=False,
     future=True,
-    pool_pre_ping=True,  # Verify connections before using
-    poolclass=NullPool if "render" in DATABASE_URL else None,  # No pooling for Render
+    pool_pre_ping=True,
 )
 
 # Create async session factory

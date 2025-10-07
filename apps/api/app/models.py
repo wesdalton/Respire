@@ -19,7 +19,7 @@ class WHOOPConnection(Base):
 
     # OAuth tokens
     access_token = Column(Text, nullable=False)
-    refresh_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=True)  # WHOOP may not always provide refresh tokens
     token_expires_at = Column(DateTime(timezone=True), nullable=False)
 
     # WHOOP user info

@@ -66,7 +66,7 @@ async def whoop_callback(
         # Get WHOOP user profile
         whoop_client = create_whoop_client(
             access_token=token_data["access_token"],
-            refresh_token=token_data["refresh_token"],
+            refresh_token=token_data.get("refresh_token"),
             expires_at=token_data["expires_at"]
         )
         profile = await whoop_client.get_user_profile()
@@ -77,12 +77,15 @@ async def whoop_callback(
         )
         connection = result.scalar_one_or_none()
 
+        # Convert whoop_user_id to string (WHOOP returns it as an integer)
+        whoop_user_id = str(profile.get("user_id")) if profile.get("user_id") else None
+
         if connection:
             # Update existing connection
             connection.access_token = token_data["access_token"]
-            connection.refresh_token = token_data["refresh_token"]
+            connection.refresh_token = token_data.get("refresh_token")
             connection.token_expires_at = token_data["expires_at"]
-            connection.whoop_user_id = profile.get("user_id")
+            connection.whoop_user_id = whoop_user_id
             connection.scope = token_data.get("scope", "").split()
             connection.connected_at = datetime.utcnow()
             connection.sync_enabled = True
@@ -91,9 +94,9 @@ async def whoop_callback(
             connection = WHOOPConnection(
                 user_id=user_id,
                 access_token=token_data["access_token"],
-                refresh_token=token_data["refresh_token"],
+                refresh_token=token_data.get("refresh_token"),
                 token_expires_at=token_data["expires_at"],
-                whoop_user_id=profile.get("user_id"),
+                whoop_user_id=whoop_user_id,
                 scope=token_data.get("scope", "").split(),
                 sync_enabled=True
             )
@@ -114,6 +117,9 @@ async def whoop_callback(
 
     except Exception as e:
         await db.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ WHOOP callback error: {error_details}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to connect WHOOP account: {str(e)}"
@@ -224,6 +230,13 @@ async def manual_sync(
         # Fetch all data
         data = await whoop_client.sync_all_data(start_date, end_date)
 
+        # Update connection tokens if they were refreshed
+        if whoop_client.access_token != connection.access_token:
+            connection.access_token = whoop_client.access_token
+            connection.refresh_token = whoop_client.refresh_token
+            connection.token_expires_at = whoop_client.expires_at
+            await db.commit()
+
         # Transform WHOOP data to HealthMetric format
         health_metrics = whoop_transformer.transform_sync_data(
             user_id=user_id,
@@ -288,6 +301,9 @@ async def manual_sync(
 
     except Exception as e:
         await db.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ WHOOP sync error: {error_details}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Sync failed: {str(e)}"

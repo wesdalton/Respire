@@ -81,20 +81,26 @@ class WHOOPOAuthService:
         Raises:
             httpx.HTTPStatusError: If token exchange fails
         """
+        payload = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+        }
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self.TOKEN_URL,
-                data={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                },
+                data=payload,
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
             )
+
+            if response.status_code != 200:
+                print(f"❌ Token exchange failed: {response.status_code}")
+                print(f"   Response: {response.text}")
 
             response.raise_for_status()
             token_data = response.json()
