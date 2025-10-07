@@ -1,4 +1,3 @@
-import React from 'react';
 import { Activity, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
