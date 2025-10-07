@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://respire.ai/sitemap.xml
