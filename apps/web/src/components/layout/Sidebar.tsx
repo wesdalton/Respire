@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Heart, Clock, Lightbulb, Settings, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Heart, Clock, Lightbulb, Settings } from 'lucide-react';
 
 interface NavItem {
   to: string;
@@ -16,29 +16,19 @@ const navItems: NavItem[] = [
   { to: '/settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
 ];
 
-export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
-  const closeSidebar = () => setIsOpen(false);
-
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed bottom-4 right-4 z-50 lg:hidden bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors"
-        aria-label="Toggle navigation menu"
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
-      {/* Overlay for mobile */}
+      {/* Backdrop - only visible on mobile when open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={closeSidebar}
+          className="fixed inset-0 bg-black/20 z-30 lg:hidden backdrop-blur-sm"
+          onClick={onClose}
           aria-hidden="true"
         />
       )}
@@ -49,15 +39,16 @@ export function Sidebar() {
           fixed lg:static inset-y-0 left-0 z-40
           w-64 bg-white border-r border-gray-200
           transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <nav className="flex flex-col h-full py-6 px-4 space-y-2">
+        <nav className="flex flex-col h-full py-6 px-4 space-y-2 mt-16 lg:mt-0">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              onClick={closeSidebar}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-150 ${
                   isActive
