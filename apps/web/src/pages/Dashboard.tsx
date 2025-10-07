@@ -274,7 +274,7 @@ export default function Dashboard() {
             </div>
             <div className="text-center">
               <p className="text-3xl font-bold text-green-600">
-                {dashboard?.recent_moods?.length ?? 0}
+                {metrics?.mood_entries ?? 0}
               </p>
               <p className="text-sm text-gray-600 mt-1">Mood Entries</p>
             </div>

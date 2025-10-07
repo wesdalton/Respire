@@ -168,9 +168,9 @@ class APIClient {
     return data;
   }
 
-  async getBurnoutHistory(limit = 30): Promise<BurnoutScore[]> {
+  async getBurnoutHistory(startDate?: string, endDate?: string, limit = 30): Promise<BurnoutScore[]> {
     const { data } = await this.client.get<BurnoutScore[]>('/health/burnout/history', {
-      params: { limit },
+      params: { start_date: startDate, end_date: endDate, limit },
     });
     return data;
   }

@@ -323,6 +323,7 @@ class DashboardMetrics(BaseModel):
     burnout_risk_score: Optional[float] = None
     burnout_trend: Optional[str] = None
     days_tracked: int = 0
+    mood_entries: int = 0
     last_sync: Optional[datetime] = None
 
 

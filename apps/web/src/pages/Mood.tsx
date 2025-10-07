@@ -120,12 +120,12 @@ export default function Mood() {
             <div className="bg-white rounded-lg shadow-md p-5">
               <div className="text-sm font-medium text-gray-600 mb-1">Average Mood</div>
               <div className="text-3xl font-bold text-gray-900">
-                {stats.average_rating ? stats.average_rating.toFixed(1) : 'N/A'}
+                {stats.statistics?.average ? stats.statistics.average.toFixed(1) : 'N/A'}
                 <span className="text-lg text-gray-500">/10</span>
               </div>
-              {stats.total_ratings !== undefined && (
+              {stats.data_points !== undefined && (
                 <div className="text-xs text-gray-500 mt-1">
-                  Based on {stats.total_ratings} rating{stats.total_ratings !== 1 ? 's' : ''}
+                  Based on {stats.data_points} rating{stats.data_points !== 1 ? 's' : ''}
                 </div>
               )}
             </div>
@@ -146,12 +146,12 @@ export default function Mood() {
             <div className="bg-white rounded-lg shadow-md p-5">
               <div className="text-sm font-medium text-gray-600 mb-1">Recent High</div>
               <div className="text-3xl font-bold text-green-600">
-                {stats.highest_recent ? stats.highest_recent : moods && moods.length > 0 ? Math.max(...moods.slice(0, 7).map(m => m.rating)) : 'N/A'}
-                {(stats.highest_recent || (moods && moods.length > 0)) && (
+                {stats.statistics?.highest || 'N/A'}
+                {stats.statistics?.highest && (
                   <span className="text-lg text-gray-500">/10</span>
                 )}
               </div>
-              <div className="text-xs text-gray-500 mt-1">Last 7 days</div>
+              <div className="text-xs text-gray-500 mt-1">Last {stats.period_days || 30} days</div>
             </div>
           </div>
         )}

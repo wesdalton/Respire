@@ -5,7 +5,7 @@ Query health data, calculate burnout risk, generate insights
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from app.database import get_db
@@ -361,29 +361,45 @@ async def get_dashboard(
 
     Returns summary metrics, recent data, latest burnout score, and latest insight.
     """
-    # Get latest health metrics (last 7 days)
-    seven_days_ago = date.today() - timedelta(days=7)
+    # Get latest health metrics (last 30 days for display)
+    thirty_days_ago = date.today() - timedelta(days=30)
 
     health_result = await db.execute(
         select(HealthMetric).where(
             and_(
                 HealthMetric.user_id == user_id,
-                HealthMetric.date >= seven_days_ago
+                HealthMetric.date >= thirty_days_ago
             )
-        ).order_by(HealthMetric.date.desc()).limit(7)
+        ).order_by(HealthMetric.date.desc()).limit(30)
     )
     health_metrics = list(health_result.scalars().all())
 
-    # Get latest mood ratings
+    # Get latest mood ratings (last 30 days)
     mood_result = await db.execute(
         select(MoodRating).where(
             and_(
                 MoodRating.user_id == user_id,
-                MoodRating.date >= seven_days_ago
+                MoodRating.date >= thirty_days_ago
             )
-        ).order_by(MoodRating.date.desc()).limit(7)
+        ).order_by(MoodRating.date.desc()).limit(30)
     )
     mood_ratings = list(mood_result.scalars().all())
+
+    # Get total count of all health metrics (for "Days Tracked" stat)
+    total_health_count = await db.execute(
+        select(func.count(HealthMetric.id)).where(
+            HealthMetric.user_id == user_id
+        )
+    )
+    total_days_tracked = total_health_count.scalar()
+
+    # Get total count of all mood ratings
+    total_mood_count = await db.execute(
+        select(func.count(MoodRating.id)).where(
+            MoodRating.user_id == user_id
+        )
+    )
+    total_mood_entries = total_mood_count.scalar()
 
     # Get latest burnout score
     burnout_result = await db.execute(
@@ -392,6 +408,88 @@ async def get_dashboard(
         ).order_by(BurnoutScore.date.desc()).limit(1)
     )
     latest_burnout = burnout_result.scalar_one_or_none()
+
+    # Auto-calculate burnout if missing or stale (older than 24 hours)
+    should_calculate = False
+    if not latest_burnout:
+        should_calculate = True
+        print(f"🔄 No burnout score found for user, will auto-calculate")
+    elif latest_burnout.calculated_at < datetime.now(timezone.utc) - timedelta(hours=24):
+        should_calculate = True
+        print(f"🔄 Burnout score is stale (>24h old), will recalculate")
+
+    if should_calculate and (health_metrics or mood_ratings):
+        try:
+            # Calculate burnout automatically
+            start_date_calc = date.today() - timedelta(days=14)  # Use 14 days for calculation
+
+            # Fetch data for calculation
+            health_calc_result = await db.execute(
+                select(HealthMetric).where(
+                    and_(
+                        HealthMetric.user_id == user_id,
+                        HealthMetric.date >= start_date_calc
+                    )
+                ).order_by(HealthMetric.date)
+            )
+            health_calc_metrics = health_calc_result.scalars().all()
+
+            mood_calc_result = await db.execute(
+                select(MoodRating).where(
+                    and_(
+                        MoodRating.user_id == user_id,
+                        MoodRating.date >= start_date_calc
+                    )
+                ).order_by(MoodRating.date)
+            )
+            mood_calc_ratings = mood_calc_result.scalars().all()
+
+            if health_calc_metrics or mood_calc_ratings:
+                # Convert to dicts
+                health_dicts = [
+                    {
+                        "date": m.date,
+                        "recovery_score": m.recovery_score,
+                        "resting_hr": m.resting_hr,
+                        "hrv": m.hrv,
+                        "sleep_duration_minutes": m.sleep_duration_minutes,
+                        "sleep_quality_score": m.sleep_quality_score,
+                        "day_strain": m.day_strain
+                    }
+                    for m in health_calc_metrics
+                ]
+
+                mood_dicts = [
+                    {"date": m.date, "rating": m.rating}
+                    for m in mood_calc_ratings
+                ]
+
+                # Calculate risk
+                risk_analysis = burnout_calculator.calculate_overall_risk(
+                    health_metrics=health_dicts,
+                    mood_ratings=mood_dicts
+                )
+
+                # Store burnout score
+                new_burnout = BurnoutScore(
+                    user_id=user_id,
+                    date=date.today(),
+                    overall_risk_score=risk_analysis["overall_risk_score"],
+                    risk_factors=risk_analysis["risk_factors"],
+                    confidence_score=risk_analysis["confidence_score"],
+                    data_points_used=risk_analysis["data_points_used"]
+                )
+
+                db.add(new_burnout)
+                await db.commit()
+                await db.refresh(new_burnout)
+                latest_burnout = new_burnout
+
+                print(f"✅ Auto-calculated burnout: {risk_analysis['overall_risk_score']}%")
+
+        except Exception as e:
+            # Don't fail dashboard if burnout calculation fails
+            print(f"⚠️ Auto-calculation failed (non-critical): {e}")
 
     # Get latest insight
     insight_result = await db.execute(
@@ -442,7 +540,8 @@ async def get_dashboard(
         latest_mood=latest_mood.rating if latest_mood else None,
         burnout_risk_score=latest_burnout.overall_risk_score if latest_burnout else None,
         burnout_trend=burnout_trend,
-        days_tracked=len(health_metrics),
+        days_tracked=total_days_tracked,  # Total across all time, not just recent
+        mood_entries=total_mood_entries,  # Total mood entries
         last_sync=health_metrics[0].created_at if health_metrics else None
     )
 

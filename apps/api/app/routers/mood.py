@@ -5,20 +5,122 @@ Track daily mood and notes
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import MoodRating
+from app.models import MoodRating, HealthMetric, BurnoutScore
 from app.schemas import (
     MoodRatingCreate,
     MoodRatingUpdate,
     MoodRatingResponse
 )
+from app.services.burnout_calculator import burnout_calculator
 
 
 router = APIRouter(prefix="/mood", tags=["mood"])
+
+
+async def recalculate_burnout(user_id: str, db: AsyncSession):
+    """
+    Helper function to recalculate burnout score after mood/health data changes
+    """
+    try:
+        print(f"🔄 Recalculating burnout after data change...")
+
+        # Get last 14 days for calculation
+        calc_start_date = date.today() - timedelta(days=14)
+
+        # Fetch health metrics
+        health_result = await db.execute(
+            select(HealthMetric).where(
+                and_(
+                    HealthMetric.user_id == user_id,
+                    HealthMetric.date >= calc_start_date
+                )
+            ).order_by(HealthMetric.date)
+        )
+        health_metrics = health_result.scalars().all()
+
+        # Fetch mood ratings
+        mood_result = await db.execute(
+            select(MoodRating).where(
+                and_(
+                    MoodRating.user_id == user_id,
+                    MoodRating.date >= calc_start_date
+                )
+            ).order_by(MoodRating.date)
+        )
+        mood_ratings = mood_result.scalars().all()
+
+        if not health_metrics and not mood_ratings:
+            print("⚠️  Insufficient data for burnout calculation")
+            return
+
+        # Convert to dicts
+        health_dicts = [
+            {
+                "date": m.date,
+                "recovery_score": m.recovery_score,
+                "resting_hr": m.resting_hr,
+                "hrv": m.hrv,
+                "sleep_duration_minutes": m.sleep_duration_minutes,
+                "sleep_quality_score": m.sleep_quality_score,
+                "day_strain": m.day_strain
+            }
+            for m in health_metrics
+        ]
+
+        mood_dicts = [
+            {"date": m.date, "rating": m.rating}
+            for m in mood_ratings
+        ]
+
+        # Calculate risk
+        risk_analysis = burnout_calculator.calculate_overall_risk(
+            health_metrics=health_dicts,
+            mood_ratings=mood_dicts
+        )
+
+        # Check if burnout score already exists for today
+        today = date.today()
+        existing_burnout_result = await db.execute(
+            select(BurnoutScore).where(
+                and_(
+                    BurnoutScore.user_id == user_id,
+                    BurnoutScore.date == today
+                )
+            )
+        )
+        existing_burnout = existing_burnout_result.scalar_one_or_none()
+
+        if existing_burnout:
+            # Update existing score
+            existing_burnout.overall_risk_score = risk_analysis["overall_risk_score"]
+            existing_burnout.risk_factors = risk_analysis["risk_factors"]
+            existing_burnout.confidence_score = risk_analysis["confidence_score"]
+            existing_burnout.data_points_used = risk_analysis["data_points_used"]
+            existing_burnout.calculated_at = datetime.utcnow()
+        else:
+            # Create new score
+            new_burnout = BurnoutScore(
+                user_id=user_id,
+                date=today,
+                overall_risk_score=risk_analysis["overall_risk_score"],
+                risk_factors=risk_analysis["risk_factors"],
+                confidence_score=risk_analysis["confidence_score"],
+                data_points_used=risk_analysis["data_points_used"]
+            )
+            db.add(new_burnout)
+
+        await db.commit()
+
+        print(f"✅ Burnout recalculated: {risk_analysis['overall_risk_score']}%")
+
+    except Exception as e:
+        # Don't fail the main operation if burnout calculation fails
+        print(f"⚠️ Burnout recalculation failed (non-critical): {e}")
 
 
 @router.post("/", response_model=MoodRatingResponse, status_code=status.HTTP_201_CREATED)
@@ -61,6 +163,9 @@ async def create_mood_rating(
     db.add(new_mood)
     await db.commit()
     await db.refresh(new_mood)
+
+    # Recalculate burnout after mood change
+    await recalculate_burnout(user_id, db)
 
     return MoodRatingResponse(
         id=new_mood.id,
@@ -190,6 +295,9 @@ async def update_mood_rating(
     await db.commit()
     await db.refresh(mood)
 
+    # Recalculate burnout after mood change
+    await recalculate_burnout(user_id, db)
+
     return MoodRatingResponse(
         id=mood.id,
         user_id=mood.user_id,
@@ -228,6 +336,9 @@ async def delete_mood_rating(
 
     await db.delete(mood)
     await db.commit()
+
+    # Recalculate burnout after mood deletion
+    await recalculate_burnout(user_id, db)
 
     return None
 

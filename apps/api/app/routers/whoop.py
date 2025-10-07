@@ -335,6 +335,81 @@ async def manual_sync(
 
         await db.commit()
 
+        # Auto-calculate burnout after sync if we have enough data
+        if records_inserted + records_updated > 0:
+            try:
+                print(f"🔄 Triggering burnout calculation after sync...")
+                from app.services.burnout_calculator import burnout_calculator
+                from app.models import BurnoutScore, MoodRating
+
+                # Get last 14 days for calculation
+                calc_start_date = date.today() - timedelta(days=14)
+
+                health_calc_result = await db.execute(
+                    select(HealthMetric).where(
+                        and_(
+                            HealthMetric.user_id == user_id,
+                            HealthMetric.date >= calc_start_date
+                        )
+                    ).order_by(HealthMetric.date)
+                )
+                health_calc_metrics = health_calc_result.scalars().all()
+
+                mood_calc_result = await db.execute(
+                    select(MoodRating).where(
+                        and_(
+                            MoodRating.user_id == user_id,
+                            MoodRating.date >= calc_start_date
+                        )
+                    ).order_by(MoodRating.date)
+                )
+                mood_calc_ratings = mood_calc_result.scalars().all()
+
+                if health_calc_metrics or mood_calc_ratings:
+                    # Convert to dicts
+                    health_dicts = [
+                        {
+                            "date": m.date,
+                            "recovery_score": m.recovery_score,
+                            "resting_hr": m.resting_hr,
+                            "hrv": m.hrv,
+                            "sleep_duration_minutes": m.sleep_duration_minutes,
+                            "sleep_quality_score": m.sleep_quality_score,
+                            "day_strain": m.day_strain
+                        }
+                        for m in health_calc_metrics
+                    ]
+
+                    mood_dicts = [
+                        {"date": m.date, "rating": m.rating}
+                        for m in mood_calc_ratings
+                    ]
+
+                    # Calculate risk
+                    risk_analysis = burnout_calculator.calculate_overall_risk(
+                        health_metrics=health_dicts,
+                        mood_ratings=mood_dicts
+                    )
+
+                    # Store burnout score
+                    new_burnout = BurnoutScore(
+                        user_id=user_id,
+                        date=date.today(),
+                        overall_risk_score=risk_analysis["overall_risk_score"],
+                        risk_factors=risk_analysis["risk_factors"],
+                        confidence_score=risk_analysis["confidence_score"],
+                        data_points_used=risk_analysis["data_points_used"]
+                    )
+
+                    db.add(new_burnout)
+                    await db.commit()
+
+                    print(f"✅ Burnout calculated after sync: {risk_analysis['overall_risk_score']}%")
+
+            except Exception as calc_error:
+                # Don't fail sync if burnout calculation fails
+                print(f"⚠️ Burnout auto-calc after sync failed (non-critical): {calc_error}")
+
         return {
             "message": "Sync completed successfully",
             "data": {
@@ -359,6 +434,15 @@ async def manual_sync(
         import traceback
         error_details = traceback.format_exc()
         print(f"❌ WHOOP sync error: {error_details}")
+
+        # Check if it's an authentication error
+        error_str = str(e)
+        if "401" in error_str or "Unauthorized" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="WHOOP authorization expired. Please reconnect your WHOOP account in Settings."
+            )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Sync failed: {str(e)}"

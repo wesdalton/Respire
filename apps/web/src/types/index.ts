@@ -76,6 +76,7 @@ export interface DashboardData {
     burnout_risk_score?: number;
     burnout_trend?: string;
     days_tracked: number;
+    mood_entries: number;
     last_sync?: string;
   };
   recent_health_data: HealthMetric[];

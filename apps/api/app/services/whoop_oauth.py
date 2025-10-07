@@ -26,6 +26,7 @@ class WHOOPOAuthService:
         "read:sleep",
         "read:workout",
         "read:body_measurement",
+        "offline",  # Required to receive refresh tokens
     ]
 
     def __init__(self):
@@ -125,6 +126,8 @@ class WHOOPOAuthService:
         Raises:
             httpx.HTTPStatusError: If token refresh fails
         """
+        print(f"🔄 Refreshing WHOOP access token...")
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self.TOKEN_URL,
@@ -133,11 +136,16 @@ class WHOOPOAuthService:
                     "refresh_token": refresh_token,
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
+                    "scope": "offline",  # Required by WHOOP to get new refresh token
                 },
                 headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                 }
             )
+
+            if response.status_code != 200:
+                print(f"❌ Token refresh failed: {response.status_code}")
+                print(f"   Response: {response.text}")
 
             response.raise_for_status()
             token_data = response.json()
@@ -146,6 +154,8 @@ class WHOOPOAuthService:
             token_data["expires_at"] = datetime.utcnow() + timedelta(
                 seconds=token_data["expires_in"]
             )
+
+            print(f"✅ Access token refreshed successfully")
 
             return token_data
 
