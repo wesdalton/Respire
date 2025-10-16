@@ -4,6 +4,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import MetricsCard from '../components/dashboard/MetricsCard';
 import BurnoutGauge from '../components/dashboard/BurnoutGauge';
 import HealthChart from '../components/dashboard/HealthChart';
+import HealthMetricsSwiper from '../components/dashboard/HealthMetricsSwiper';
 import InsightCard from '../components/dashboard/InsightCard';
 import MoodEntry from '../components/mood/MoodEntry';
 import { apiClient } from '../services/api';
@@ -106,8 +107,8 @@ export default function Dashboard() {
     );
   }
 
-  // Get last 7 days of health data (data is ordered oldest to newest)
-  const recentHealthData = dashboard?.recent_health_data?.slice(-7) || [];
+  // Get all available health data (data is ordered oldest to newest)
+  const recentHealthData = dashboard?.recent_health_data || [];
   const metrics = dashboard?.metrics;
 
   // Check if today's mood exists
@@ -223,13 +224,22 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Health Chart */}
+          {/* Health Chart - Desktop: Chart, Mobile: Swiper */}
           <div className="lg:col-span-2">
             {recentHealthData.length > 0 ? (
-              <HealthChart
-                data={recentHealthData}
-                metrics={['recovery_score', 'hrv', 'sleep_quality_score', 'day_strain']}
-              />
+              <>
+                {/* Desktop: Show chart */}
+                <div className="hidden lg:block">
+                  <HealthChart
+                    data={recentHealthData}
+                    metrics={['recovery_score', 'hrv', 'sleep_quality_score', 'day_strain']}
+                  />
+                </div>
+                {/* Mobile: Show swipeable cards */}
+                <div className="lg:hidden">
+                  <HealthMetricsSwiper data={recentHealthData} />
+                </div>
+              </>
             ) : (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center h-full flex flex-col items-center justify-center">
                 <Activity className="w-12 h-12 text-gray-300 mb-3" />

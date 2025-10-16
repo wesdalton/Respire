@@ -36,8 +36,11 @@ const metricConfig = {
 };
 
 const HealthChart = ({ data, metrics }: HealthChartProps) => {
+  // Show last 30 days max for readability on chart
+  const displayData = data.slice(-30);
+
   // Transform data for recharts (data already ordered oldest to newest)
-  const chartData = data.map((item) => ({
+  const chartData = displayData.map((item) => ({
     date: format(new Date(item.date), 'MM/dd'),
     recovery_score: item.recovery_score,
     hrv: item.hrv,
@@ -47,7 +50,9 @@ const HealthChart = ({ data, metrics }: HealthChartProps) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">Health Metrics Trend</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-6">
+        Health Metrics Trend {displayData.length < data.length && `(Last ${displayData.length} days)`}
+      </h3>
 
       <ResponsiveContainer width="100%" height={350}>
         <LineChart
