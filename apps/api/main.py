@@ -57,7 +57,7 @@ app.add_middleware(
         "https://*.vercel.app",
         "https://www.respire.cloud",
         "https://respire.cloud",
-        "https://api.respire.cloud",
+        "https://try.respire.cloud",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -65,10 +65,10 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(whoop.router, prefix="/api")
-app.include_router(mood.router, prefix="/api")
-app.include_router(health.router, prefix="/api")
+app.include_router(auth.router)
+app.include_router(whoop.router)
+app.include_router(mood.router)
+app.include_router(health.router)
 
 # Mount static files for uploads
 uploads_dir = Path("uploads")
