@@ -54,7 +54,7 @@ export default function BurnoutAlertCard({ data }: BurnoutAlertCardProps) {
           <div className="space-y-2">
             {data.warning_signs.map((sign, index) => (
               <div key={index} className={`rounded-lg p-3 border ${SEVERITY_COLORS[sign.severity]}`}>
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
                     <span className="text-xs font-bold uppercase tracking-wide w-16 inline-block text-center">{sign.severity}</span>
                   </div>
@@ -73,8 +73,8 @@ export default function BurnoutAlertCard({ data }: BurnoutAlertCardProps) {
           <div className="space-y-3">
             {data.immediate_actions.map((action, index) => (
               <div key={index} className="bg-white rounded-lg p-4 border-l-4 border-purple-500 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
                     <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
                       {index + 1}
                     </div>

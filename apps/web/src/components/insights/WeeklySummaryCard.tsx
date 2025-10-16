@@ -90,14 +90,16 @@ export default function WeeklySummaryCard({ data }: WeeklySummaryCardProps) {
           <div className="space-y-2">
             {data.focus_areas.map((area, index) => (
               <div key={index} className="bg-white/60 rounded-lg p-4 border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`px-2 py-0.5 text-xs font-medium rounded border w-16 text-center ${
-                      PRIORITY_BADGES[area.priority]
-                    }`}
-                  >
-                    {area.priority}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded border w-16 text-center ${
+                        PRIORITY_BADGES[area.priority]
+                      }`}
+                    >
+                      {area.priority}
+                    </span>
+                  </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-900 text-sm mb-1">{area.area}</div>
                     <p className="text-sm text-gray-600">{area.description}</p>

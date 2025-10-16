@@ -67,13 +67,16 @@ class AIInsightsService:
             # Get structured schema for this insight type
             response_format = self._get_response_schema(insight_type)
 
+            # Get specialized system prompt based on insight type
+            system_prompt = self._get_system_prompt(insight_type)
+
             # Call OpenAI API with structured outputs
             response = openai.chat.completions.create(
                 model="gpt-4o-2024-08-06",  # Model that supports structured outputs
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a health and wellness coach specializing in burnout prevention. Provide empathetic, actionable advice based on user's health data. Always respond with structured JSON data."
+                        "content": system_prompt
                     },
                     {
                         "role": "user",
@@ -81,7 +84,7 @@ class AIInsightsService:
                     }
                 ],
                 response_format=response_format,
-                temperature=0.7
+                temperature=0.8
             )
 
             content = response.choices[0].message.content
@@ -199,60 +202,185 @@ class AIInsightsService:
 
         return "\n".join(summary)
 
+    def _get_system_prompt(self, insight_type: str) -> str:
+        """Get specialized system prompt based on insight type"""
+
+        if insight_type == "weekly_summary":
+            return """You are Dr. Sarah Chen, a sports medicine physician with 15 years of experience working with elite athletes and high-performing professionals. You specialize in performance optimization, recovery science, and burnout prevention. You've published research on HRV patterns, sleep architecture, and their relationship to overtraining syndrome.
+
+Your approach combines evidence-based physiological analysis with practical behavioral interventions. You understand that metrics like HRV, resting heart rate, and recovery scores are not just numbers—they tell a story about the autonomic nervous system's state, stress load, and adaptive capacity.
+
+When analyzing data, you:
+1. Look for patterns across multiple metrics (e.g., declining HRV + elevated RHR + poor sleep = sympathetic dominance)
+2. Consider the interplay between training load (strain) and recovery capacity
+3. Identify early warning signs before they become problems
+4. Provide specific, personalized recommendations based on the individual's current state—not generic advice
+5. Explain the "why" behind recommendations so people understand the physiology
+
+Always respond with structured JSON data."""
+
+        elif insight_type == "burnout_alert":
+            return """You are Dr. James Rodriguez, a clinical psychologist and burnout researcher with expertise in occupational health psychology and psychophysiology. You've spent 20 years studying the intersection of chronic stress, physiological dysregulation, and mental health.
+
+You understand that burnout is not just "being tired"—it's a state of chronic physiological and psychological exhaustion characterized by:
+- HPA axis dysregulation (shown in HRV suppression, elevated resting HR)
+- Sleep disruption despite fatigue
+- Reduced parasympathetic activity and recovery capacity
+- Mood changes and emotional exhaustion
+
+Your approach is empathetic but direct. You help people recognize that their body is sending clear signals, and ignoring them leads to worse outcomes. You provide immediate, actionable interventions that target both the physiological stress response and behavioral patterns.
+
+When someone shows burnout indicators, you:
+1. Validate what their body is telling them with specific metric patterns
+2. Explain the physiological mechanisms in accessible terms
+3. Provide tiered interventions (immediate relief + longer-term changes)
+4. Emphasize that recovery is not optional—it's physiologically necessary
+5. Avoid generic platitudes; give specific actions tied to their data
+
+Always respond with structured JSON data."""
+
+        elif insight_type == "trend_analysis":
+            return """You are Dr. Maya Patel, a data-driven exercise physiologist and recovery optimization specialist. You have a PhD in human performance and 12 years of experience analyzing longitudinal biometric data for professional athletes, military personnel, and executives.
+
+Your expertise is pattern recognition across physiological time series. You understand:
+- Circadian rhythm disruption patterns in sleep and HRV data
+- Accumulating fatigue signatures (progressive HRV decline, rising resting HR, reduced recovery scores)
+- Training adaptation vs. maladaptation (positive vs. negative trends in recovery metrics)
+- The lag effect between stress exposure and metric changes
+- Compensatory patterns (e.g., increasing sleep duration but decreasing sleep quality)
+
+You excel at identifying trends that most people miss—like a gradual 10% HRV decline over 3 weeks that signals mounting fatigue, or weekend recovery patterns that aren't fully restoring baseline metrics.
+
+When analyzing trends, you:
+1. Identify the direction, magnitude, and significance of changes
+2. Look for divergence between metrics (e.g., strain increasing while recovery declining)
+3. Spot cyclical patterns (weekly, weekend effects)
+4. Connect metric trends to likely causal factors
+5. Provide trend-specific interventions, not generic advice
+6. Quantify the impact and urgency (e.g., "20% HRV decline indicates significant accumulated fatigue")
+
+Always respond with structured JSON data."""
+
+        else:
+            # Default system prompt
+            return """You are an expert health and performance coach specializing in biometric analysis and burnout prevention. You provide evidence-based, personalized recommendations based on physiological data patterns. Always respond with structured JSON data."""
+
     def _create_prompt(self, insight_type: str, data_summary: str) -> str:
         """Create GPT prompt based on insight type"""
         prompts = {
             "weekly_summary": f"""
-Analyze this user's weekly health data and provide a brief summary with 3-5 actionable recommendations.
+Analyze this individual's health data and provide a physiologically-informed assessment with personalized recommendations.
 
-Data Summary:
+BIOMETRIC DATA (with trends):
 {data_summary}
 
-Format your response as:
-1. A brief title (one line)
-2. A 2-3 sentence summary of their overall health status
-3. 3-5 specific, actionable recommendations
+YOUR TASK:
+1. Analyze the SPECIFIC metrics and trends shown above—reference actual values and changes
+2. Identify relationships between metrics (e.g., is declining HRV coupled with poor sleep? Is high strain balanced by recovery?)
+3. Assess their autonomic nervous system state and recovery capacity based on the data patterns
+4. Provide 3-5 KEY METRICS in your response that highlight the most important signals
+5. Identify 2-3 FOCUS AREAS that represent the biggest opportunities or concerns based on THEIR specific data
+6. Give 3-5 PERSONALIZED recommendations that:
+   - Target their specific metric patterns (not generic "sleep more" advice)
+   - Explain the physiological rationale
+   - Vary in impact and category (sleep, recovery, training, stress management)
+   - Are immediately actionable
 
-Keep the tone supportive and encouraging.
+CRITICAL: Your recommendations must be SPECIFIC to this person's data. If their HRV is increasing +15%, don't tell them to reduce stress. If their sleep is already 8+ hours, don't tell them to sleep more. Make every recommendation directly tied to an observed metric or trend.
+
+Title should be specific (e.g., "Strong Recovery, But Watch Your Rising Strain" not "Weekly Health Summary").
 """,
             "burnout_alert": f"""
-The user's burnout risk is elevated. Provide empathetic guidance and immediate actions they can take.
+This individual is showing physiological signs of elevated burnout risk. Provide an evidence-based assessment and intervention plan.
 
-Data Summary:
+BIOMETRIC DATA (with trends):
 {data_summary}
 
-Format your response as:
-1. A supportive title
-2. A 2-3 sentence acknowledgment of their situation
-3. 3-5 immediate, practical steps they can take today
+YOUR TASK:
+1. Identify the SPECIFIC physiological signatures of burnout in their data:
+   - Which metrics are most concerning? (reference actual values and trends)
+   - What does the combination of metrics tell you about their stress response?
+   - Are there signs of HPA axis dysregulation, sympathetic dominance, or poor recovery?
 
-Be empathetic and avoid being alarmist.
+2. Explain what's happening in their body:
+   - Connect the dots between their metrics and physiological state
+   - Help them understand WHY these patterns matter
+   - Be direct but compassionate
+
+3. Provide 3-5 WARNING SIGNS drawn from their actual data (not generic symptoms)
+   - Each warning sign should reference specific metrics
+   - Indicate severity (high/medium/low) based on magnitude of change
+
+4. Give 3-5 IMMEDIATE ACTIONS that:
+   - Target their specific physiological dysfunction
+   - Include both acute interventions (what to do today) and pattern changes (what to adjust this week)
+   - Explain why each action will help based on their data
+   - Include realistic timeframes
+
+5. Suggest SUPPORT RESOURCES (professional help, tools, practices) that are evidence-based
+
+CRITICAL: Avoid generic burnout advice. Every recommendation must be tied to their specific metric patterns. If HRV is down 25%, that's different than mood being low with stable physiology—tailor your advice accordingly.
 """,
             "trend_analysis": f"""
-Analyze the user's health trends and provide insights into patterns and changes.
+Analyze the directional changes in this individual's health metrics and provide insights into what these trends reveal about their physiological state.
 
-Data Summary:
+BIOMETRIC DATA (with trends and daily values):
 {data_summary}
 
-Format your response as:
-1. A descriptive title about the trend
-2. A 2-3 sentence analysis of what the data shows
-3. 3-5 recommendations based on the trends
+YOUR TASK:
+1. For each key metric, assess:
+   - Direction: Is it increasing, decreasing, or stable?
+   - Magnitude: How significant is the change? (reference % changes and absolute values)
+   - Significance: Does this trend matter physiologically? (high/medium/low)
+   - Insight: What does this trend indicate about their body's state?
 
-Focus on patterns, not individual data points.
+2. Identify PATTERNS across metrics:
+   - Are multiple metrics trending in the same concerning direction?
+   - Are there compensatory patterns (e.g., increasing sleep duration but decreasing quality)?
+   - Do weekend vs weekday patterns exist?
+   - Are there signs of accumulating fatigue or improving adaptation?
+
+3. Provide 3-5 TREND analyses that:
+   - Focus on the most significant changes in their data
+   - Explain what each trend likely indicates (adaptation, maladaptation, recovery, strain accumulation)
+   - Connect trends to likely causal factors when patterns are clear
+   - Quantify the changes (don't just say "declining"—say "declining 15% over the period")
+
+4. Identify 2-4 PATTERNS that represent important relationships or cyclical behaviors
+
+5. Give 3-5 RECOMMENDATIONS that are:
+   - Directly responsive to observed trends (if HRV is declining, address why; if sleep is improving, reinforce what's working)
+   - Preventive if trends are concerning
+   - Reinforcing if trends are positive
+   - Based on the specific trajectory, not the current state
+
+CRITICAL: This is about CHANGE over time, not absolute values. If everything is stable, explain what stable means in their context. If trends are mixed, explain the implications. Make every insight trend-specific—never generic.
+
+Overview should describe the overall trajectory (e.g., "Progressive fatigue accumulation with declining recovery markers" not "Mixed health trends").
 """,
             "recovery_optimization": f"""
-The user wants to improve their recovery. Provide targeted advice based on their data.
+This individual wants to optimize their recovery capacity. Analyze their data and provide targeted recovery interventions.
 
-Data Summary:
+BIOMETRIC DATA (with trends):
 {data_summary}
 
-Format your response as:
-1. A motivating title
-2. A 2-3 sentence assessment of their current recovery
-3. 3-5 specific strategies to improve recovery
+YOUR TASK:
+1. Assess their current recovery state:
+   - What do recovery score, HRV, and resting HR patterns reveal?
+   - Is their recovery capacity improving, declining, or stable?
+   - Are there specific recovery limiters in the data? (sleep quality, duration, HRV suppression, elevated HR)
 
-Include both lifestyle and training adjustments.
+2. Analyze the balance between stress/strain and recovery:
+   - Is their training load/strain appropriate for their recovery capacity?
+   - Are they under-recovered relative to their activity level?
+
+3. Provide 3-5 specific recovery optimization strategies that:
+   - Target their specific recovery limiters (not generic advice)
+   - Include both immediate interventions and training adjustments
+   - Address lifestyle factors (sleep, stress, nutrition) and training factors (volume, intensity, rest days)
+   - Explain the expected physiological impact
+
+CRITICAL: Base every recommendation on their specific data patterns. If sleep is already good (8+ hrs, good quality), don't make it about sleep. If HRV is already high and stable, focus elsewhere. Make it truly personalized.
 """
         }
 

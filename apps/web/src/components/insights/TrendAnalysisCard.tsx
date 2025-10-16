@@ -44,8 +44,8 @@ export default function TrendAnalysisCard({ data }: TrendAnalysisCardProps) {
 
               return (
                 <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${DIRECTION_COLORS[trend.direction]}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${DIRECTION_COLORS[trend.direction]}`}>
                       <DirectionIcon className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
