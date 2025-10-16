@@ -81,7 +81,7 @@ class SupabaseAuthService:
             User data and session tokens
 
         Raises:
-            httpx.HTTPStatusError: If login fails
+            Exception: With user-friendly error message
         """
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -96,7 +96,14 @@ class SupabaseAuthService:
                 }
             )
 
-            response.raise_for_status()
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get("error_description") or error_data.get("msg") or "Authentication failed"
+                except Exception:
+                    error_message = "Invalid email or password"
+                raise Exception(error_message)
+
             return response.json()
 
     async def sign_out(self, access_token: str) -> bool:
