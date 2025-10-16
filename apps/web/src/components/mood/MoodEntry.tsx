@@ -33,6 +33,13 @@ export default function MoodEntry({ onSubmit, initialRating, initialNotes, isEdi
     }
   };
 
+  // Check if form has changed when editing
+  const hasChanges = isEditing
+    ? selectedRating !== initialRating || notes !== (initialNotes ?? '')
+    : true;
+
+  const isSubmitDisabled = selectedRating === null || (isEditing && !hasChanges);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">
@@ -94,10 +101,10 @@ export default function MoodEntry({ onSubmit, initialRating, initialNotes, isEdi
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={selectedRating === null}
+          disabled={isSubmitDisabled}
           className={`
             w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200
-            ${selectedRating !== null
+            ${!isSubmitDisabled
               ? 'bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md hover:shadow-lg'
               : 'bg-gray-300 cursor-not-allowed'
             }

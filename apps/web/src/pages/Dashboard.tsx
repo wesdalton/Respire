@@ -166,7 +166,12 @@ export default function Dashboard() {
                 <p className="text-gray-600">Saving your mood...</p>
               </div>
             ) : (
-              <MoodEntry onSubmit={handleMoodSubmit} />
+              <MoodEntry
+                onSubmit={handleMoodSubmit}
+                initialRating={todaysMood?.rating}
+                initialNotes={todaysMood?.notes || ''}
+                isEditing={hasTodaysMood}
+              />
             )}
           </div>
         )}
