@@ -73,69 +73,70 @@ const InsightCard = ({ insight }: InsightCardProps) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-purple-50 rounded-xl shadow-sm border border-purple-100 p-6">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-start gap-3 flex-1">
-          <div className="bg-gradient-to-br from-purple-500 to-blue-500 p-2 rounded-lg">
+    <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-purple-50 rounded-xl shadow-sm border border-purple-100 p-4 sm:p-6">
+      <div className="mb-4">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="bg-gradient-to-br from-purple-500 to-blue-500 p-2.5 rounded-lg flex-shrink-0">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-semibold text-gray-900">{insight.title}</h3>
-              <span className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium whitespace-nowrap inline-flex items-center justify-center">
-                {INSIGHT_TYPE_LABELS[insight.insight_type] || insight.insight_type}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-gray-500">
-              {dateRange && (
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {dateRange}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {formatDistanceToNow(new Date(insight.created_at), { addSuffix: true })}
-              </span>
-            </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{insight.title}</h3>
+            <span className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium whitespace-nowrap inline-block">
+              {INSIGHT_TYPE_LABELS[insight.insight_type] || insight.insight_type}
+            </span>
           </div>
         </div>
 
-        {/* Feedback and Action Buttons */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handleFeedback(true)}
-            disabled={submittingFeedback || insight.helpful === true || isDeleting}
-            className={`p-2 rounded-lg transition-colors ${
-              insight.helpful === true
-                ? 'bg-green-100 text-green-600'
-                : 'hover:bg-green-50 text-gray-400 hover:text-green-600'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-            title="Helpful"
-          >
-            <ThumbsUp className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleFeedback(false)}
-            disabled={submittingFeedback || insight.helpful === false || isDeleting}
-            className={`p-2 rounded-lg transition-colors ${
-              insight.helpful === false
-                ? 'bg-red-100 text-red-600'
-                : 'hover:bg-red-50 text-gray-400 hover:text-red-600'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-            title="Not helpful"
-          >
-            <ThumbsDown className="w-4 h-4" />
-          </button>
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting || submittingFeedback}
-            className="p-2 rounded-lg transition-colors hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Delete insight"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+            {dateRange && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {dateRange}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatDistanceToNow(new Date(insight.created_at), { addSuffix: true })}
+            </span>
+          </div>
+
+          {/* Feedback and Action Buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => handleFeedback(true)}
+              disabled={submittingFeedback || insight.helpful === true || isDeleting}
+              className={`p-2 rounded-lg transition-colors ${
+                insight.helpful === true
+                  ? 'bg-green-100 text-green-600'
+                  : 'hover:bg-green-50 text-gray-400 hover:text-green-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title="Helpful"
+            >
+              <ThumbsUp className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleFeedback(false)}
+              disabled={submittingFeedback || insight.helpful === false || isDeleting}
+              className={`p-2 rounded-lg transition-colors ${
+                insight.helpful === false
+                  ? 'bg-red-100 text-red-600'
+                  : 'hover:bg-red-50 text-gray-400 hover:text-red-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title="Not helpful"
+            >
+              <ThumbsDown className="w-4 h-4" />
+            </button>
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting || submittingFeedback}
+              className="p-2 rounded-lg transition-colors hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Delete insight"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

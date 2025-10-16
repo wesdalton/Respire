@@ -2,6 +2,9 @@
 
 * {
   box-sizing: border-box;
+}
+
+*:not(svg):not(svg *) {
   max-width: 100%;
 }
 

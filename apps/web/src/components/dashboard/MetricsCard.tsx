@@ -50,22 +50,22 @@ const MetricsCard = ({ title, value, unit, icon, trend, color, subtitle }: Metri
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
-          <div className="flex items-baseline gap-1 flex-wrap">
-            <span className="text-xl sm:text-3xl font-semibold text-gray-900 break-words">{value}</span>
-            <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap">{unit}</span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-600 mb-2 truncate">{title}</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-3xl sm:text-4xl font-bold text-gray-900">{value}</span>
+            <span className="text-base sm:text-lg text-gray-500 font-medium">{unit}</span>
           </div>
           {subtitle && (
-            <p className="text-xs text-amber-600 mt-1 font-medium truncate">{subtitle}</p>
+            <p className="text-xs text-amber-600 mt-2 font-medium truncate">{subtitle}</p>
           )}
         </div>
-        <div className={`${colors.bg} p-2 sm:p-3 rounded-lg flex-shrink-0 self-start`}>
-          <div className={colors.icon}>{icon}</div>
+        <div className={`${colors.bg} p-3 sm:p-4 rounded-xl flex-shrink-0`}>
+          <div className={`${colors.icon} w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center`}>{icon}</div>
         </div>
       </div>
-      <div className={`flex items-center gap-1 mt-3 sm:mt-4 ${colors.trend}`}>
+      <div className={`flex items-center gap-1.5 mt-4 ${colors.trend}`}>
         {renderTrendIcon()}
         <span className="text-xs font-medium capitalize">{trend}</span>
       </div>
