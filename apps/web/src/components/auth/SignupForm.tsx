@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, AlertCircle, CheckCircle, Activity } from 'lucide-react';
 import { apiClient } from '../../services/api';
 import { Avatar } from '../common/Avatar';
 
@@ -89,6 +89,12 @@ export function SignupForm() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500 blur-lg opacity-40 animate-pulse"></div>
+              <Activity className="w-12 h-12 text-blue-600 relative" />
+            </div>
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Create Account</h1>
           <p className="text-gray-600">Start your burnout prevention journey</p>
         </div>
