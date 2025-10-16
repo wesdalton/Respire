@@ -5,7 +5,7 @@ AI-Powered Burnout Prevention Platform integrating WHOOP health data with person
 **Built by**: Wes Dalton, UPenn '27
 **Status**: Production-ready backend, frontend architecture complete
 
-**Try it out**: [try.respire.cloud](https://try.respire.cloud)
+**Try it out**: [tryrespire.ai](https://tryrespire.ai)
 
 ---
 
