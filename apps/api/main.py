@@ -23,11 +23,16 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     print("🚀 Starting Respire API...")
-    try:
-        await init_db()
-        print("✅ Database initialized")
-    except Exception as e:
-        print(f"⚠️  Database initialization failed: {e}")
+
+    # Skip table creation in production (tables should already exist)
+    # Uncomment below if you need to create tables on first deploy
+    # try:
+    #     await init_db()
+    #     print("✅ Database initialized")
+    # except Exception as e:
+    #     print(f"⚠️  Database initialization failed: {e}")
+
+    print("✅ API started (skipping table creation)")
 
     yield
 
