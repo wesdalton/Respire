@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { apiClient } from '../services/api';
 import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
 import { Avatar } from '../components/common/Avatar';
 import type { WHOOPConnection } from '../types';
 
 export default function Settings() {
+  usePageTitle('Settings');
   const { user, signout } = useAuth();
   const [whoopConnection, setWhoopConnection] = useState<WHOOPConnection | null>(null);
   const [loadingWhoop, setLoadingWhoop] = useState(true);

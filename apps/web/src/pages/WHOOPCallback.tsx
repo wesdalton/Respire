@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { apiClient } from '../services/api';
 import { Loader, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function WHOOPCallback() {
+  usePageTitle('Connecting WHOOP');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');

@@ -1,0 +1,23 @@
+# Respire - AI-Powered Burnout Prevention & Health Tracking
+# https://respire.cloud
+
+User-agent: *
+Allow: /
+
+# Disallow auth pages from being indexed
+Disallow: /login
+Disallow: /signup
+Disallow: /dashboard
+Disallow: /mood
+Disallow: /history
+Disallow: /insights
+Disallow: /settings
+
+# Allow public assets
+Allow: /logo.svg
+Allow: /manifest.json
+Allow: /*.css
+Allow: /*.js
+
+# Sitemap location
+Sitemap: https://respire.cloud/sitemap.xml

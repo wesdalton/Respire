@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Activity, Heart, Zap, Moon, RefreshCw, AlertCircle } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
+import { usePageTitle } from '../hooks/usePageTitle';
 import MetricsCard from '../components/dashboard/MetricsCard';
 import BurnoutGauge from '../components/dashboard/BurnoutGauge';
 import HealthChart from '../components/dashboard/HealthChart';
@@ -11,6 +12,7 @@ import { apiClient } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function Dashboard() {
+  usePageTitle('Dashboard');
   const { dashboard, isLoading, error, refetch, sync, isSyncing } = useDashboard();
   const queryClient = useQueryClient();
   const [showMoodEntry, setShowMoodEntry] = useState(false);

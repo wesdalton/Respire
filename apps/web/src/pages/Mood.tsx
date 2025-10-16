@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useMood } from '../hooks/useMood';
+import { usePageTitle } from '../hooks/usePageTitle';
 import MoodEntry from '../components/mood/MoodEntry';
 import MoodHistory from '../components/mood/MoodHistory';
 import { TrendingUp, TrendingDown, Minus, ArrowLeft } from 'lucide-react';
 import type { MoodRating } from '../types';
 
 export default function Mood() {
+  usePageTitle('Mood Tracking');
   const {
     moods,
     stats,

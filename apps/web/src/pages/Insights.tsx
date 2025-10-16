@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useHealth } from '../hooks/useHealth';
+import { usePageTitle } from '../hooks/usePageTitle';
 import InsightCard from '../components/dashboard/InsightCard';
 import { Sparkles, RefreshCw, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
 import { apiClient } from '../services/api';
@@ -12,6 +13,7 @@ const INSIGHT_TYPES = [
 ];
 
 export default function Insights() {
+  usePageTitle('AI Insights');
   const { insights, isLoading, error } = useHealth();
   const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);

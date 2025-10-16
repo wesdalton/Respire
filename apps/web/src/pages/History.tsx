@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useHealth } from '../hooks/useHealth';
+import { usePageTitle } from '../hooks/usePageTitle';
 import HealthChart from '../components/dashboard/HealthChart';
 import { Download, Calendar } from 'lucide-react';
 import { format, subDays } from 'date-fns';
@@ -7,6 +8,7 @@ import { format, subDays } from 'date-fns';
 type DateRange = 7 | 14 | 30;
 
 export default function History() {
+  usePageTitle('Health History');
   const [dateRange, setDateRange] = useState<DateRange>(30);
 
   const endDate = useMemo(() => new Date().toISOString().split('T')[0], []);
