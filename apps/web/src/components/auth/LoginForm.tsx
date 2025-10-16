@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useDemo } from '../../context/DemoContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, AlertCircle, Activity } from 'lucide-react';
 
@@ -9,6 +10,7 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signin } = useAuth();
+  const { activateDemo } = useDemo();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,6 +26,12 @@ export function LoginForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTryDemo = () => {
+    activateDemo();
+    // Use window.location to force full page reload and reinitialize AuthContext
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -95,8 +103,25 @@ export function LoginForm() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTryDemo}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition font-medium shadow-lg hover:shadow-xl"
+            >
+              Try Demo (No Account Needed)
+            </button>
+
+            <p className="text-center text-gray-600 text-sm">
               Don't have an account?{' '}
               <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign up

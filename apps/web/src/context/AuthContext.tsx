@@ -20,6 +20,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check if user is already authenticated
     const initAuth = async () => {
+      // Check for demo mode first
+      const isDemoMode = localStorage.getItem('demo_mode') === 'active';
+
+      if (isDemoMode) {
+        try {
+          const userData = await apiClient.getCurrentUser();
+          setUser(userData);
+        } catch (error) {
+          console.error('Failed to fetch demo user:', error);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Normal authentication flow
       const token = localStorage.getItem('access_token');
       if (token) {
         try {

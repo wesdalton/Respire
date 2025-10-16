@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { DemoBanner } from '../demo/DemoBanner';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -15,6 +16,9 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      {/* Demo Banner */}
+      <DemoBanner />
+
       {/* Header */}
       <Header onMenuClick={toggleSidebar} />
 

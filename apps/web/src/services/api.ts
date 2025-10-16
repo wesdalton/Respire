@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import type { AuthResponse, DashboardData, HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection } from '../types';
+import DemoDataService from './DemoDataService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -48,6 +49,10 @@ class APIClient {
     );
   }
 
+  private isDemoMode(): boolean {
+    return localStorage.getItem('demo_mode') === 'active';
+  }
+
   setToken(accessToken: string, refreshToken?: string) {
     this.token = accessToken;
     localStorage.setItem('access_token', accessToken);
@@ -69,11 +74,15 @@ class APIClient {
   }
 
   isAuthenticated(): boolean {
-    return !!this.token;
+    return !!this.token || this.isDemoMode();
   }
 
   // Auth endpoints
   async signup(email: string, password: string, firstName?: string, lastName?: string, profilePictureUrl?: string) {
+    // Demo mode doesn't support signup
+    if (this.isDemoMode()) {
+      throw new Error('Signup is not available in demo mode. Please exit demo to create an account.');
+    }
     const { data } = await this.client.post<any>('/auth/signup', {
       email,
       password,
@@ -94,6 +103,10 @@ class APIClient {
   }
 
   async signin(email: string, password: string) {
+    // Demo mode doesn't support signin
+    if (this.isDemoMode()) {
+      throw new Error('Signin is not available in demo mode.');
+    }
     const { data } = await this.client.post<AuthResponse>('/auth/signin', {
       email,
       password,
@@ -103,6 +116,12 @@ class APIClient {
   }
 
   async signout() {
+    // Demo mode: just clear demo flag
+    if (this.isDemoMode()) {
+      localStorage.removeItem('demo_mode');
+      DemoDataService.clear();
+      return;
+    }
     try {
       await this.client.post('/auth/signout');
     } finally {
@@ -111,11 +130,17 @@ class APIClient {
   }
 
   async getCurrentUser() {
+    if (this.isDemoMode()) {
+      return DemoDataService.getCurrentUser();
+    }
     const { data } = await this.client.get('/auth/me');
     return data;
   }
 
   async updateProfile(profile: { first_name?: string; last_name?: string; profile_picture_url?: string }) {
+    if (this.isDemoMode()) {
+      return DemoDataService.updateProfile(profile);
+    }
     const { data } = await this.client.put('/auth/me', profile);
     return data;
   }
@@ -136,12 +161,18 @@ class APIClient {
 
   // Dashboard
   async getDashboard(): Promise<DashboardData> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getDashboard();
+    }
     const { data } = await this.client.get<DashboardData>('/health/dashboard');
     return data;
   }
 
   // Health metrics
   async getHealthMetrics(startDate?: string, endDate?: string, limit = 30): Promise<HealthMetric[]> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getHealthMetrics(startDate, endDate, limit);
+    }
     const { data } = await this.client.get<HealthMetric[]>('/health/metrics', {
       params: { start_date: startDate, end_date: endDate, limit },
     });
@@ -150,6 +181,9 @@ class APIClient {
 
   // Mood ratings
   async getMoodRatings(startDate?: string, endDate?: string, limit = 30): Promise<MoodRating[]> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getMoodRatings(startDate, endDate, limit);
+    }
     const { data } = await this.client.get<MoodRating[]>('/mood/', {
       params: { start_date: startDate, end_date: endDate, limit },
     });
@@ -157,11 +191,17 @@ class APIClient {
   }
 
   async createMoodRating(params: { date: string; rating: number; notes?: string }): Promise<MoodRating> {
+    if (this.isDemoMode()) {
+      return DemoDataService.createMoodRating(params);
+    }
     const { data } = await this.client.post<MoodRating>('/mood/', params);
     return data;
   }
 
   async updateMoodRating(date: string, rating?: number, notes?: string): Promise<MoodRating> {
+    if (this.isDemoMode()) {
+      return DemoDataService.updateMoodRating(date, rating, notes);
+    }
     const { data } = await this.client.put<MoodRating>(`/mood/${date}`, {
       rating,
       notes,
@@ -170,10 +210,16 @@ class APIClient {
   }
 
   async deleteMoodRating(date: string): Promise<void> {
+    if (this.isDemoMode()) {
+      return DemoDataService.deleteMoodRating(date);
+    }
     await this.client.delete(`/mood/${date}`);
   }
 
   async getMoodStats(days = 30) {
+    if (this.isDemoMode()) {
+      return DemoDataService.getMoodStats(days);
+    }
     const { data } = await this.client.get('/mood/stats/summary', {
       params: { days },
     });
@@ -182,6 +228,9 @@ class APIClient {
 
   // Burnout
   async calculateBurnoutRisk(days = 14): Promise<BurnoutScore> {
+    if (this.isDemoMode()) {
+      return DemoDataService.calculateBurnoutRisk(days);
+    }
     const { data } = await this.client.post<BurnoutScore>('/health/burnout/calculate', null, {
       params: { days },
     });
@@ -189,6 +238,9 @@ class APIClient {
   }
 
   async getBurnoutHistory(startDate?: string, endDate?: string, limit = 30): Promise<BurnoutScore[]> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getBurnoutHistory(startDate, endDate, limit);
+    }
     const { data } = await this.client.get<BurnoutScore[]>('/health/burnout/history', {
       params: { start_date: startDate, end_date: endDate, limit },
     });
@@ -197,6 +249,9 @@ class APIClient {
 
   // AI Insights
   async generateInsight(insightType = 'weekly_summary', days = 14): Promise<AIInsight> {
+    if (this.isDemoMode()) {
+      return DemoDataService.generateInsight(insightType, days);
+    }
     const { data } = await this.client.post<AIInsight>('/health/insights/generate', null, {
       params: { insight_type: insightType, days },
     });
@@ -204,6 +259,9 @@ class APIClient {
   }
 
   async getInsights(limit = 10): Promise<AIInsight[]> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getInsights(limit);
+    }
     const { data } = await this.client.get<AIInsight[]>('/health/insights', {
       params: { limit },
     });
@@ -211,6 +269,9 @@ class APIClient {
   }
 
   async updateInsightFeedback(insightId: string, helpful: boolean, feedback?: string): Promise<AIInsight> {
+    if (this.isDemoMode()) {
+      return DemoDataService.updateInsightFeedback(insightId, helpful, feedback);
+    }
     const { data } = await this.client.patch<AIInsight>(`/health/insights/${insightId}/feedback`, null, {
       params: { helpful, feedback },
     });
@@ -218,12 +279,18 @@ class APIClient {
   }
 
   async deleteInsight(insightId: string): Promise<{ message: string }> {
+    if (this.isDemoMode()) {
+      return DemoDataService.deleteInsight(insightId);
+    }
     const { data } = await this.client.delete<{ message: string }>(`/health/insights/${insightId}`);
     return data;
   }
 
   // WHOOP
   async getWHOOPConnection(): Promise<WHOOPConnection> {
+    if (this.isDemoMode()) {
+      return DemoDataService.getWHOOPConnection();
+    }
     const { data } = await this.client.get<WHOOPConnection>('/whoop/connection');
     return data;
   }
@@ -244,6 +311,9 @@ class APIClient {
   }
 
   async syncWHOOP(startDate?: string, endDate?: string) {
+    if (this.isDemoMode()) {
+      return DemoDataService.syncWHOOP(startDate, endDate);
+    }
     const { data } = await this.client.post('/whoop/sync/manual', null, {
       params: { start_date: startDate, end_date: endDate },
     });
@@ -251,6 +321,9 @@ class APIClient {
   }
 
   async disconnectWHOOP(): Promise<void> {
+    if (this.isDemoMode()) {
+      return DemoDataService.disconnectWHOOP();
+    }
     await this.client.delete('/whoop/connection');
   }
 }

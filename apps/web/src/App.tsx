@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
+import { DemoProvider } from './context/DemoContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 
@@ -28,33 +29,35 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+      <DemoProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/settings/whoop/callback" element={<WHOOPCallback />} />
-              <Route element={<Layout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/mood" element={<Mood />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/insights" element={<Insights />} />
-                <Route path="/settings" element={<Settings />} />
+              {/* Protected routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/settings/whoop/callback" element={<WHOOPCallback />} />
+                <Route element={<Layout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/mood" element={<Mood />} />
+                  <Route path="/history" element={<History />} />
+                  <Route path="/insights" element={<Insights />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Redirect root to dashboard */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {/* Catch all - redirect to dashboard */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+              {/* Catch all - redirect to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </DemoProvider>
     </QueryClientProvider>
   );
 }
