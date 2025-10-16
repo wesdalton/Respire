@@ -55,9 +55,12 @@ app.add_middleware(
         "http://localhost:5174",
         "http://localhost:5175",
         "https://*.vercel.app",
+        "https://tryrespire.ai",
+        "https://app.tryrespire.ai",
+        "https://www.tryrespire.ai",
+        # Legacy domains (if needed during migration)
         "https://www.respire.cloud",
         "https://respire.cloud",
-        "https://try.respire.cloud",
     ],
     allow_credentials=True,
     allow_methods=["*"],

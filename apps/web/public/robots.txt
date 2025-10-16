@@ -1,5 +1,5 @@
 # Respire - AI-Powered Burnout Prevention & Health Tracking
-# https://respire.cloud
+# https://tryrespire.ai
 
 User-agent: *
 Allow: /
@@ -20,4 +20,4 @@ Allow: /*.css
 Allow: /*.js
 
 # Sitemap location
-Sitemap: https://respire.cloud/sitemap.xml
+Sitemap: https://tryrespire.ai/sitemap.xml
