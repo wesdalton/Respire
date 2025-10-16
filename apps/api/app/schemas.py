@@ -119,9 +119,11 @@ class AIInsightBase(BaseModel):
 
 class AIInsightCreate(AIInsightBase):
     user_id: UUID
-    model_used: str = "gpt-4"
+    model_used: str = Field(default="gpt-4", alias="modelUsed")
     tokens_used: Optional[int] = None
     expires_at: Optional[datetime] = None
+
+    model_config = {"protected_namespaces": ()}
 
 
 class AIInsightUpdate(BaseModel):
@@ -132,11 +134,13 @@ class AIInsightUpdate(BaseModel):
 class AIInsightResponse(AIInsightBase):
     id: UUID
     user_id: UUID
-    model_used: str
+    model_used: str = Field(alias="modelUsed")
     tokens_used: Optional[int] = None
     created_at: datetime
     expires_at: Optional[datetime] = None
     helpful: Optional[bool] = None
+
+    model_config = {"protected_namespaces": ()}
     user_feedback: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
