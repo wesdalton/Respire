@@ -65,8 +65,69 @@ export interface AIInsight {
   recommendations?: {
     items: string[];
   };
+  structured_data?: WeeklySummaryData | BurnoutAlertData | TrendAnalysisData;
+  date_range_start?: string;
+  date_range_end?: string;
+  helpful?: boolean;
   created_at: string;
   expires_at?: string;
+}
+
+// Structured data types for different insight types
+export interface WeeklySummaryData {
+  title: string;
+  summary: string;
+  key_metrics: Array<{
+    name: string;
+    value: string;
+    trend: 'improving' | 'stable' | 'declining';
+    status: 'good' | 'fair' | 'needs_attention';
+  }>;
+  focus_areas: Array<{
+    area: string;
+    priority: 'high' | 'medium' | 'low';
+    description: string;
+  }>;
+  recommendations: Array<{
+    category: string;
+    action: string;
+    impact: 'high' | 'medium' | 'low';
+  }>;
+}
+
+export interface BurnoutAlertData {
+  title: string;
+  risk_level: 'low' | 'moderate' | 'high' | 'critical';
+  message: string;
+  warning_signs: Array<{
+    sign: string;
+    severity: 'high' | 'medium' | 'low';
+  }>;
+  immediate_actions: Array<{
+    action: string;
+    why: string;
+    timeframe: string;
+  }>;
+  support_resources: string[];
+}
+
+export interface TrendAnalysisData {
+  title: string;
+  overview: string;
+  trends: Array<{
+    metric: string;
+    direction: 'increasing' | 'stable' | 'decreasing';
+    significance: 'high' | 'medium' | 'low';
+    insight: string;
+  }>;
+  patterns: Array<{
+    pattern: string;
+    observation: string;
+  }>;
+  recommendations: Array<{
+    based_on: string;
+    action: string;
+  }>;
 }
 
 export interface DashboardData {

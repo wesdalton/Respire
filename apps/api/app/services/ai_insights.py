@@ -1,10 +1,11 @@
 """
 AI Insights Service
-Generate personalized health insights using OpenAI GPT-4
+Generate personalized health insights using OpenAI GPT-4 with structured outputs
 """
 import os
 from typing import Dict, List, Any, Optional
 from datetime import date, datetime
+from enum import Enum
 import json
 
 
@@ -63,41 +64,39 @@ class AIInsightsService:
             # Create prompt based on insight type
             prompt = self._create_prompt(insight_type, data_summary)
 
-            # Call OpenAI API
+            # Get structured schema for this insight type
+            response_format = self._get_response_schema(insight_type)
+
+            # Call OpenAI API with structured outputs
             response = openai.chat.completions.create(
-                model=self.model,
+                model="gpt-4o-2024-08-06",  # Model that supports structured outputs
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a health and wellness coach specializing in burnout prevention. Provide empathetic, actionable advice based on user's health data."
+                        "content": "You are a health and wellness coach specializing in burnout prevention. Provide empathetic, actionable advice based on user's health data. Always respond with structured JSON data."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                temperature=0.7,
-                max_tokens=500
+                response_format=response_format,
+                temperature=0.7
             )
 
             content = response.choices[0].message.content
             tokens_used = response.usage.total_tokens
 
-            # Parse response to extract title and recommendations
-            lines = content.split("\n")
-            title = lines[0].strip().replace("**", "").replace("#", "").strip()
-            content_text = "\n".join(lines[1:]).strip()
+            # Parse structured JSON response
+            structured_data = json.loads(content)
 
-            # Extract recommendations (look for bullet points or numbered lists)
-            recommendations = self._extract_recommendations(content_text)
-
-            return {
-                "title": title,
-                "content": content_text,
-                "recommendations": recommendations,
-                "model_used": self.model,
-                "tokens_used": tokens_used
-            }
+            # Convert structured data to our format
+            return self._format_structured_response(
+                structured_data,
+                insight_type,
+                "gpt-4o-2024-08-06",
+                tokens_used
+            )
 
         except Exception as e:
             print(f"OpenAI API error: {e}")
@@ -220,6 +219,214 @@ Include both lifestyle and training adjustments.
         }
 
         return prompts.get(insight_type, prompts["weekly_summary"])
+
+    def _get_response_schema(self, insight_type: str) -> Dict[str, Any]:
+        """Get JSON schema for structured output based on insight type"""
+
+        if insight_type == "weekly_summary":
+            return {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "weekly_summary_response",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "summary": {"type": "string"},
+                            "key_metrics": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "value": {"type": "string"},
+                                        "trend": {"type": "string", "enum": ["improving", "stable", "declining"]},
+                                        "status": {"type": "string", "enum": ["good", "fair", "needs_attention"]}
+                                    },
+                                    "required": ["name", "value", "trend", "status"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "focus_areas": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "area": {"type": "string"},
+                                        "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                                        "description": {"type": "string"}
+                                    },
+                                    "required": ["area", "priority", "description"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "recommendations": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "category": {"type": "string"},
+                                        "action": {"type": "string"},
+                                        "impact": {"type": "string", "enum": ["high", "medium", "low"]}
+                                    },
+                                    "required": ["category", "action", "impact"],
+                                    "additionalProperties": False
+                                }
+                            }
+                        },
+                        "required": ["title", "summary", "key_metrics", "focus_areas", "recommendations"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+
+        elif insight_type == "burnout_alert":
+            return {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "burnout_alert_response",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "risk_level": {"type": "string", "enum": ["low", "moderate", "high", "critical"]},
+                            "message": {"type": "string"},
+                            "warning_signs": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "sign": {"type": "string"},
+                                        "severity": {"type": "string", "enum": ["high", "medium", "low"]}
+                                    },
+                                    "required": ["sign", "severity"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "immediate_actions": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "action": {"type": "string"},
+                                        "why": {"type": "string"},
+                                        "timeframe": {"type": "string"}
+                                    },
+                                    "required": ["action", "why", "timeframe"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "support_resources": {
+                                "type": "array",
+                                "items": {"type": "string"}
+                            }
+                        },
+                        "required": ["title", "risk_level", "message", "warning_signs", "immediate_actions", "support_resources"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+
+        elif insight_type == "trend_analysis":
+            return {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "trend_analysis_response",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "overview": {"type": "string"},
+                            "trends": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "metric": {"type": "string"},
+                                        "direction": {"type": "string", "enum": ["increasing", "stable", "decreasing"]},
+                                        "significance": {"type": "string", "enum": ["high", "medium", "low"]},
+                                        "insight": {"type": "string"}
+                                    },
+                                    "required": ["metric", "direction", "significance", "insight"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "patterns": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "pattern": {"type": "string"},
+                                        "observation": {"type": "string"}
+                                    },
+                                    "required": ["pattern", "observation"],
+                                    "additionalProperties": False
+                                }
+                            },
+                            "recommendations": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "based_on": {"type": "string"},
+                                        "action": {"type": "string"}
+                                    },
+                                    "required": ["based_on", "action"],
+                                    "additionalProperties": False
+                                }
+                            }
+                        },
+                        "required": ["title", "overview", "trends", "patterns", "recommendations"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+
+        # Default to weekly summary
+        return self._get_response_schema("weekly_summary")
+
+    def _format_structured_response(
+        self,
+        structured_data: Dict[str, Any],
+        insight_type: str,
+        model: str,
+        tokens: int
+    ) -> Dict[str, Any]:
+        """Format structured data into our response format"""
+
+        # Store the structured data for the frontend to use
+        return {
+            "title": structured_data.get("title", "Health Insight"),
+            "content": structured_data.get("summary") or structured_data.get("message") or structured_data.get("overview", ""),
+            "recommendations": self._extract_recommendations_from_structured(structured_data, insight_type),
+            "structured_data": structured_data,  # Include full structured data
+            "insight_type": insight_type,
+            "model_used": model,
+            "tokens_used": tokens
+        }
+
+    def _extract_recommendations_from_structured(
+        self,
+        structured_data: Dict[str, Any],
+        insight_type: str
+    ) -> List[str]:
+        """Extract simple recommendation list from structured data for backward compatibility"""
+        recommendations = []
+
+        if insight_type == "weekly_summary":
+            for rec in structured_data.get("recommendations", []):
+                recommendations.append(rec.get("action", ""))
+        elif insight_type == "burnout_alert":
+            for action in structured_data.get("immediate_actions", []):
+                recommendations.append(action.get("action", ""))
+        elif insight_type == "trend_analysis":
+            for rec in structured_data.get("recommendations", []):
+                recommendations.append(rec.get("action", ""))
+
+        return [r for r in recommendations if r]  # Filter empty strings
 
     def _extract_recommendations(self, content: str) -> List[str]:
         """Extract recommendation items from content"""

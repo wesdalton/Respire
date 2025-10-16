@@ -36,7 +36,7 @@ async def get_health_metrics(
     """
     Get health metrics for authenticated user
 
-    Returns metrics sorted by date (most recent first)
+    Returns metrics sorted by date (oldest first for charts)
     """
     query = select(HealthMetric).where(HealthMetric.user_id == user_id)
 
@@ -45,7 +45,7 @@ async def get_health_metrics(
     if end_date:
         query = query.where(HealthMetric.date <= end_date)
 
-    query = query.order_by(HealthMetric.date.desc()).limit(limit)
+    query = query.order_by(HealthMetric.date.asc()).limit(limit)
 
     result = await db.execute(query)
     metrics = result.scalars().all()
@@ -281,6 +281,7 @@ async def generate_ai_insight(
         title=insight_data["title"],
         content=insight_data["content"],
         recommendations={"items": insight_data["recommendations"]},
+        structured_data=insight_data.get("structured_data"),  # Store structured data
         metrics_snapshot=risk_analysis,
         model_used=insight_data["model_used"],
         tokens_used=insight_data.get("tokens_used", 0),
@@ -300,6 +301,7 @@ async def generate_ai_insight(
         title=ai_insight.title,
         content=ai_insight.content,
         recommendations=ai_insight.recommendations,
+        structured_data=ai_insight.structured_data,
         metrics_snapshot=ai_insight.metrics_snapshot,
         model_used=ai_insight.model_used,
         tokens_used=ai_insight.tokens_used,
@@ -339,6 +341,7 @@ async def get_ai_insights(
             title=i.title,
             content=i.content,
             recommendations=i.recommendations,
+            structured_data=i.structured_data,
             metrics_snapshot=i.metrics_snapshot,
             model_used=i.model_used,
             tokens_used=i.tokens_used,
@@ -349,6 +352,95 @@ async def get_ai_insights(
         )
         for i in insights
     ]
+
+
+@router.patch("/insights/{insight_id}/feedback")
+async def update_insight_feedback(
+    insight_id: str,
+    helpful: bool = Query(..., description="Was this insight helpful?"),
+    feedback: Optional[str] = Query(None, description="Optional feedback text"),
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update feedback for an AI insight
+    """
+    from uuid import UUID
+
+    result = await db.execute(
+        select(AIInsight).where(
+            and_(
+                AIInsight.id == UUID(insight_id),
+                AIInsight.user_id == user_id
+            )
+        )
+    )
+    insight = result.scalar_one_or_none()
+
+    if not insight:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Insight not found"
+        )
+
+    insight.helpful = helpful
+    if feedback:
+        insight.user_feedback = feedback
+
+    await db.commit()
+    await db.refresh(insight)
+
+    return AIInsightResponse(
+        id=insight.id,
+        user_id=insight.user_id,
+        insight_type=insight.insight_type,
+        date_range_start=insight.date_range_start,
+        date_range_end=insight.date_range_end,
+        title=insight.title,
+        content=insight.content,
+        recommendations=insight.recommendations,
+        structured_data=insight.structured_data,
+        metrics_snapshot=insight.metrics_snapshot,
+        model_used=insight.model_used,
+        tokens_used=insight.tokens_used,
+        created_at=insight.created_at,
+        expires_at=insight.expires_at,
+        helpful=insight.helpful,
+        user_feedback=insight.user_feedback
+    )
+
+
+@router.delete("/insights/{insight_id}")
+async def delete_insight(
+    insight_id: str,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete an AI insight
+    """
+    from uuid import UUID
+
+    result = await db.execute(
+        select(AIInsight).where(
+            and_(
+                AIInsight.id == UUID(insight_id),
+                AIInsight.user_id == user_id
+            )
+        )
+    )
+    insight = result.scalar_one_or_none()
+
+    if not insight:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Insight not found"
+        )
+
+    await db.delete(insight)
+    await db.commit()
+
+    return {"message": "Insight deleted successfully"}
 
 
 @router.get("/dashboard", response_model=DashboardResponse)
@@ -607,6 +699,7 @@ async def get_dashboard(
             title=latest_insight.title,
             content=latest_insight.content,
             recommendations=latest_insight.recommendations,
+            structured_data=latest_insight.structured_data,
             metrics_snapshot=latest_insight.metrics_snapshot,
             model_used=latest_insight.model_used,
             tokens_used=latest_insight.tokens_used,

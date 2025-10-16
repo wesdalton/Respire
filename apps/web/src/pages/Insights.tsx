@@ -1,13 +1,39 @@
+import { useState } from 'react';
 import { useHealth } from '../hooks/useHealth';
 import InsightCard from '../components/dashboard/InsightCard';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles, RefreshCw, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
+import { apiClient } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+
+const INSIGHT_TYPES = [
+  { value: 'weekly_summary', label: 'Weekly Summary', icon: Calendar, description: 'Overview of your week' },
+  { value: 'burnout_alert', label: 'Burnout Analysis', icon: AlertTriangle, description: 'Risk assessment' },
+  { value: 'trend_analysis', label: 'Trend Analysis', icon: TrendingUp, description: 'Pattern insights' },
+];
 
 export default function Insights() {
   const { insights, isLoading, error } = useHealth();
+  const queryClient = useQueryClient();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [selectedInsightType, setSelectedInsightType] = useState('weekly_summary');
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
 
-  const handleGenerateInsight = () => {
-    // Placeholder for generate insight functionality
-    alert('Generate new insight functionality coming soon!');
+  const handleGenerateInsight = async (insightType?: string) => {
+    const typeToUse = insightType || selectedInsightType;
+    setIsGenerating(true);
+    setGenerateError(null);
+    setShowTypeSelector(false);
+
+    try {
+      await apiClient.generateInsight(typeToUse, 14);
+      // Refresh insights list
+      await queryClient.invalidateQueries({ queryKey: ['insights'] });
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate insight');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (isLoading) {
@@ -54,14 +80,56 @@ export default function Insights() {
             <p className="text-gray-600">Personalized recommendations based on your health data</p>
           </div>
 
-          <button
-            onClick={handleGenerateInsight}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <RefreshCw size={18} />
-            Generate New Insight
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowTypeSelector(!showTypeSelector)}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={18} className={isGenerating ? 'animate-spin' : ''} />
+              {isGenerating ? 'Generating...' : 'Generate New Insight'}
+            </button>
+
+            {/* Insight Type Dropdown */}
+            {showTypeSelector && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-10 overflow-hidden">
+                <div className="p-3 bg-gradient-to-r from-purple-50 to-blue-50 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900 text-sm">Select Insight Type</h3>
+                </div>
+                <div className="p-2">
+                  {INSIGHT_TYPES.map((type) => {
+                    const Icon = type.icon;
+                    return (
+                      <button
+                        key={type.value}
+                        onClick={() => {
+                          setSelectedInsightType(type.value);
+                          handleGenerateInsight(type.value);
+                        }}
+                        className={`w-full text-left p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150 flex items-start gap-3 ${
+                          selectedInsightType === type.value ? 'bg-purple-50 ring-1 ring-purple-200' : ''
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">{type.label}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{type.description}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Generation Error */}
+        {generateError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{generateError}</p>
+          </div>
+        )}
 
         {/* Info Card */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-5">
@@ -97,11 +165,12 @@ export default function Insights() {
               and mood ratings to receive personalized recommendations.
             </p>
             <button
-              onClick={handleGenerateInsight}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              onClick={() => setShowTypeSelector(!showTypeSelector)}
+              disabled={isGenerating}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw size={18} />
-              Generate Your First Insight
+              <RefreshCw size={18} className={isGenerating ? 'animate-spin' : ''} />
+              {isGenerating ? 'Generating...' : 'Generate Your First Insight'}
             </button>
           </div>
         )}

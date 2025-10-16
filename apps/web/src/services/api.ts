@@ -210,6 +210,18 @@ class APIClient {
     return data;
   }
 
+  async updateInsightFeedback(insightId: string, helpful: boolean, feedback?: string): Promise<AIInsight> {
+    const { data } = await this.client.patch<AIInsight>(`/health/insights/${insightId}/feedback`, null, {
+      params: { helpful, feedback },
+    });
+    return data;
+  }
+
+  async deleteInsight(insightId: string): Promise<{ message: string }> {
+    const { data } = await this.client.delete<{ message: string }>(`/health/insights/${insightId}`);
+    return data;
+  }
+
   // WHOOP
   async getWHOOPConnection(): Promise<WHOOPConnection> {
     const { data } = await this.client.get<WHOOPConnection>('/whoop/connection');

@@ -114,6 +114,7 @@ class AIInsightBase(BaseModel):
     title: Optional[str] = None
     content: str
     recommendations: Optional[Dict[str, Any]] = None
+    structured_data: Optional[Dict[str, Any]] = None
     metrics_snapshot: Optional[Dict[str, Any]] = None
 
 
@@ -139,11 +140,9 @@ class AIInsightResponse(AIInsightBase):
     created_at: datetime
     expires_at: Optional[datetime] = None
     helpful: Optional[bool] = None
-
-    model_config = {"protected_namespaces": ()}
     user_feedback: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, protected_namespaces=())
 
 
 # Sync Job Schemas

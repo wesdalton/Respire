@@ -121,6 +121,7 @@ class AIInsight(Base):
     title = Column(Text)
     content = Column(Text, nullable=False)
     recommendations = Column(JSONB)
+    structured_data = Column(JSONB)  # New: Store structured insight data for rich UI
 
     metrics_snapshot = Column(JSONB)
 
