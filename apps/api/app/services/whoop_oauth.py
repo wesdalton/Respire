@@ -5,7 +5,7 @@ Handles authentication flow and token management for WHOOP API v2
 import os
 import secrets
 import httpx
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 from urllib.parse import urlencode
 
@@ -107,7 +107,7 @@ class WHOOPOAuthService:
             token_data = response.json()
 
             # Add expiration timestamp
-            token_data["expires_at"] = datetime.utcnow() + timedelta(
+            token_data["expires_at"] = datetime.now(timezone.utc) + timedelta(
                 seconds=token_data["expires_in"]
             )
 
@@ -151,7 +151,7 @@ class WHOOPOAuthService:
             token_data = response.json()
 
             # Add expiration timestamp
-            token_data["expires_at"] = datetime.utcnow() + timedelta(
+            token_data["expires_at"] = datetime.now(timezone.utc) + timedelta(
                 seconds=token_data["expires_in"]
             )
 
@@ -185,7 +185,7 @@ class WHOOPOAuthService:
         """
         # Add 5 minute buffer to refresh before actual expiration
         buffer = timedelta(minutes=5)
-        return datetime.utcnow() + buffer >= expires_at
+        return datetime.now(timezone.utc) + buffer >= expires_at
 
     async def ensure_valid_token(
         self,

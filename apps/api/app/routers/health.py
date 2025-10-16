@@ -370,7 +370,7 @@ async def get_dashboard(
                 HealthMetric.user_id == user_id,
                 HealthMetric.date >= thirty_days_ago
             )
-        ).order_by(HealthMetric.date.desc()).limit(30)
+        ).order_by(HealthMetric.date.asc())
     )
     health_metrics = list(health_result.scalars().all())
 
@@ -381,7 +381,7 @@ async def get_dashboard(
                 MoodRating.user_id == user_id,
                 MoodRating.date >= thirty_days_ago
             )
-        ).order_by(MoodRating.date.desc()).limit(30)
+        ).order_by(MoodRating.date.asc())
     )
     mood_ratings = list(mood_result.scalars().all())
 
@@ -505,9 +505,9 @@ async def get_dashboard(
     # Count pending sync jobs (placeholder - we'll implement later)
     pending_sync_jobs = 0
 
-    # Build dashboard metrics
-    latest_metric = health_metrics[0] if health_metrics else None
-    latest_mood = mood_ratings[0] if mood_ratings else None
+    # Build dashboard metrics (data is ordered oldest to newest, so get last item)
+    latest_metric = health_metrics[-1] if health_metrics else None
+    latest_mood = mood_ratings[-1] if mood_ratings else None
 
     # Determine burnout trend
     burnout_trend = None
@@ -542,7 +542,7 @@ async def get_dashboard(
         burnout_trend=burnout_trend,
         days_tracked=total_days_tracked,  # Total across all time, not just recent
         mood_entries=total_mood_entries,  # Total mood entries
-        last_sync=health_metrics[0].created_at if health_metrics else None
+        last_sync=health_metrics[-1].created_at if health_metrics else None
     )
 
     # Convert to response schemas

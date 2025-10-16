@@ -36,8 +36,8 @@ const metricConfig = {
 };
 
 const HealthChart = ({ data, metrics }: HealthChartProps) => {
-  // Transform data for recharts - reverse to show oldest to newest (left to right)
-  const chartData = [...data].reverse().map((item) => ({
+  // Transform data for recharts (data already ordered oldest to newest)
+  const chartData = data.map((item) => ({
     date: format(new Date(item.date), 'MM/dd'),
     recovery_score: item.recovery_score,
     hrv: item.hrv,

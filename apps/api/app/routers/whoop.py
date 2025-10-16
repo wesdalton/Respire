@@ -3,7 +3,7 @@ WHOOP Integration API Routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from datetime import datetime, date
 from typing import Optional
 
@@ -391,23 +391,43 @@ async def manual_sync(
                         mood_ratings=mood_dicts
                     )
 
-                    # Store burnout score
-                    new_burnout = BurnoutScore(
-                        user_id=user_id,
-                        date=date.today(),
-                        overall_risk_score=risk_analysis["overall_risk_score"],
-                        risk_factors=risk_analysis["risk_factors"],
-                        confidence_score=risk_analysis["confidence_score"],
-                        data_points_used=risk_analysis["data_points_used"]
+                    # Check if burnout score already exists for today
+                    today = date.today()
+                    existing_burnout_result = await db.execute(
+                        select(BurnoutScore).where(
+                            and_(
+                                BurnoutScore.user_id == user_id,
+                                BurnoutScore.date == today
+                            )
+                        )
                     )
+                    existing_burnout = existing_burnout_result.scalar_one_or_none()
 
-                    db.add(new_burnout)
+                    if existing_burnout:
+                        # Update existing record
+                        existing_burnout.overall_risk_score = risk_analysis["overall_risk_score"]
+                        existing_burnout.risk_factors = risk_analysis["risk_factors"]
+                        existing_burnout.confidence_score = risk_analysis["confidence_score"]
+                        existing_burnout.data_points_used = risk_analysis["data_points_used"]
+                    else:
+                        # Create new record
+                        new_burnout = BurnoutScore(
+                            user_id=user_id,
+                            date=today,
+                            overall_risk_score=risk_analysis["overall_risk_score"],
+                            risk_factors=risk_analysis["risk_factors"],
+                            confidence_score=risk_analysis["confidence_score"],
+                            data_points_used=risk_analysis["data_points_used"]
+                        )
+                        db.add(new_burnout)
+
                     await db.commit()
 
                     print(f"✅ Burnout calculated after sync: {risk_analysis['overall_risk_score']}%")
 
             except Exception as calc_error:
                 # Don't fail sync if burnout calculation fails
+                await db.rollback()
                 print(f"⚠️ Burnout auto-calc after sync failed (non-critical): {calc_error}")
 
         return {

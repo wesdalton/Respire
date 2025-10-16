@@ -106,7 +106,7 @@ export default function Dashboard() {
     );
   }
 
-  // Get last 7 days of health data
+  // Get last 7 days of health data (data is ordered oldest to newest)
   const recentHealthData = dashboard?.recent_health_data?.slice(-7) || [];
   const metrics = dashboard?.metrics;
 
@@ -115,8 +115,8 @@ export default function Dashboard() {
   const todaysMood = dashboard?.recent_moods?.find(m => m.date === today);
   const hasTodaysMood = !!todaysMood;
 
-  // Get latest mood and check if it's from today
-  const latestMood = dashboard?.recent_moods?.[0];
+  // Get latest mood (data is ordered oldest to newest, so get last item)
+  const latestMood = dashboard?.recent_moods?.[dashboard.recent_moods.length - 1];
   const latestMoodIsToday = latestMood?.date === today;
 
   return (
