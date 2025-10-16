@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -14,6 +15,7 @@ import type { HealthMetric } from '../../types/index';
 interface HealthChartProps {
   data: HealthMetric[];
   metrics: string[];
+  maxDays?: number; // Optional override for max days to display
 }
 
 const metricConfig = {
@@ -35,9 +37,24 @@ const metricConfig = {
   },
 };
 
-const HealthChart = ({ data, metrics }: HealthChartProps) => {
-  // Show last 30 days max for readability on chart
-  const displayData = data.slice(-30);
+const HealthChart = ({ data, metrics, maxDays }: HealthChartProps) => {
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1920
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // If maxDays not provided, use responsive logic for dashboard
+  const responsiveMaxDays = maxDays !== undefined ? maxDays :
+    (windowWidth >= 1500 ? 14 : 7);
+
+  const displayData = maxDays !== undefined ? data : data.slice(-responsiveMaxDays);
 
   // Transform data for recharts (data already ordered oldest to newest)
   const chartData = displayData.map((item) => ({

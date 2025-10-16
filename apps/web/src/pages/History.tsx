@@ -102,6 +102,7 @@ export default function History() {
           <HealthChart
             data={metrics}
             metrics={['recovery_score', 'hrv', 'sleep_quality_score', 'day_strain']}
+            maxDays={999} // Show all data, no limit - let date range buttons control it
           />
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">

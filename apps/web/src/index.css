@@ -4,7 +4,9 @@
   box-sizing: border-box;
 }
 
-*:not(svg):not(svg *) {
+/* Prevent horizontal overflow but exclude chart containers and SVG elements */
+div:not(.recharts-responsive-container):not(.recharts-wrapper):not(svg):not(svg *),
+p, span, h1, h2, h3, h4, h5, h6, a, button, input, textarea {
   max-width: 100%;
 }
 
