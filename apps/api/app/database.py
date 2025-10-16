@@ -23,6 +23,8 @@ engine = create_async_engine(
     echo=False,
     future=True,
     pool_pre_ping=True,
+    pool_size=3,          # Limit connection pool for Supabase
+    max_overflow=2,       # Max extra connections
 )
 
 # Create async session factory
