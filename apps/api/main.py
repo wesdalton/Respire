@@ -92,7 +92,20 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check for monitoring"""
+    """Fast health check for Railway monitoring"""
+    # Simple check - just return OK if API is responding
+    # Railway health checks happen frequently, so we don't test DB every time
+    return {
+        "status": "healthy",
+        "checks": {
+            "api": "ok",
+        }
+    }
+
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """Detailed health check with database connection test"""
     db_status = "ok"
     try:
         # Test database connection
@@ -107,7 +120,6 @@ async def health_check():
         "checks": {
             "api": "ok",
             "database": db_status,
-            "redis": "pending"
         }
     }
 
