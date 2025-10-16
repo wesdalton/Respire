@@ -113,7 +113,7 @@ class AIInsightsService:
         mood_ratings: List[Dict[str, Any]],
         burnout_analysis: Dict[str, Any]
     ) -> str:
-        """Prepare concise data summary for GPT prompt"""
+        """Prepare concise data summary for GPT prompt with trend information"""
         summary = []
 
         # Burnout risk
@@ -121,43 +121,81 @@ class AIInsightsService:
         risk_level = burnout_analysis.get("risk_level", "unknown")
         summary.append(f"Burnout Risk: {risk_score:.1f}/100 ({risk_level})")
 
-        # Recovery
-        recovery_factor = burnout_analysis.get("risk_factors", {}).get("recovery", {})
-        recovery_analysis = recovery_factor.get("analysis", {})
-        if "average_recovery" in recovery_analysis:
-            avg_recovery = recovery_analysis["average_recovery"]
-            summary.append(f"Average Recovery: {avg_recovery}/100")
+        # Helper function to calculate trend
+        def calculate_trend(values: List[float]) -> str:
+            if len(values) < 2:
+                return "insufficient data"
 
-        # Mood
-        mood_factor = burnout_analysis.get("risk_factors", {}).get("mood", {})
-        mood_analysis = mood_factor.get("analysis", {})
-        if "average_mood" in mood_analysis:
-            avg_mood = mood_analysis["average_mood"]
-            summary.append(f"Average Mood: {avg_mood}/10")
+            # Split into first half and second half
+            mid = len(values) // 2
+            first_half_avg = sum(values[:mid]) / len(values[:mid]) if values[:mid] else 0
+            second_half_avg = sum(values[mid:]) / len(values[mid:]) if values[mid:] else 0
 
-        # Sleep
-        sleep_factor = burnout_analysis.get("risk_factors", {}).get("sleep", {})
-        sleep_analysis = sleep_factor.get("analysis", {})
-        if "average_duration_hours" in sleep_analysis:
-            avg_sleep = sleep_analysis["average_duration_hours"]
-            summary.append(f"Average Sleep: {avg_sleep} hours")
+            # Calculate percentage change
+            if first_half_avg == 0:
+                return "stable"
 
-        # HRV
-        hrv_factor = burnout_analysis.get("risk_factors", {}).get("hrv", {})
-        hrv_analysis = hrv_factor.get("analysis", {})
-        if "average_hrv" in hrv_analysis:
-            avg_hrv = hrv_analysis["average_hrv"]
-            summary.append(f"Average HRV: {avg_hrv} ms")
+            change_pct = ((second_half_avg - first_half_avg) / first_half_avg) * 100
 
-        # Strain balance
-        strain_factor = burnout_analysis.get("risk_factors", {}).get("strain_balance", {})
-        strain_analysis = strain_factor.get("analysis", {})
-        if "average_strain" in strain_analysis:
-            avg_strain = strain_analysis["average_strain"]
-            summary.append(f"Average Strain: {avg_strain}/21")
+            # Determine trend (using 5% threshold for significance)
+            if change_pct > 5:
+                return f"increasing (+{change_pct:.1f}%)"
+            elif change_pct < -5:
+                return f"decreasing ({change_pct:.1f}%)"
+            else:
+                return "stable"
+
+        # Recovery with trend
+        recovery_values = [m.get("recovery_score") for m in health_metrics if m.get("recovery_score") is not None]
+        if recovery_values:
+            avg_recovery = sum(recovery_values) / len(recovery_values)
+            trend = calculate_trend(recovery_values)
+            summary.append(f"Recovery Score: {avg_recovery:.1f}/100 - {trend}")
+            summary.append(f"  Daily values: {[int(v) for v in recovery_values]}")
+
+        # Mood with trend
+        mood_values = [m.get("rating") for m in mood_ratings if m.get("rating") is not None]
+        if mood_values:
+            avg_mood = sum(mood_values) / len(mood_values)
+            trend = calculate_trend(mood_values)
+            summary.append(f"Mood Rating: {avg_mood:.1f}/10 - {trend}")
+            summary.append(f"  Daily values: {[int(v) for v in mood_values]}")
+
+        # Sleep with trend
+        sleep_values = [m.get("sleep_duration_minutes") for m in health_metrics if m.get("sleep_duration_minutes") is not None]
+        if sleep_values:
+            sleep_hours = [v / 60 for v in sleep_values]
+            avg_sleep = sum(sleep_hours) / len(sleep_hours)
+            trend = calculate_trend(sleep_hours)
+            summary.append(f"Sleep Duration: {avg_sleep:.1f} hours - {trend}")
+            summary.append(f"  Daily values: {[round(v, 1) for v in sleep_hours]} hours")
+
+        # HRV with trend
+        hrv_values = [m.get("hrv") for m in health_metrics if m.get("hrv") is not None]
+        if hrv_values:
+            avg_hrv = sum(hrv_values) / len(hrv_values)
+            trend = calculate_trend(hrv_values)
+            summary.append(f"HRV: {avg_hrv:.1f} ms - {trend}")
+            summary.append(f"  Daily values: {[int(v) for v in hrv_values]} ms")
+
+        # Strain with trend
+        strain_values = [m.get("day_strain") for m in health_metrics if m.get("day_strain") is not None]
+        if strain_values:
+            avg_strain = sum(strain_values) / len(strain_values)
+            trend = calculate_trend(strain_values)
+            summary.append(f"Day Strain: {avg_strain:.1f}/21 - {trend}")
+            summary.append(f"  Daily values: {[round(v, 1) for v in strain_values]}")
+
+        # Resting HR with trend
+        hr_values = [m.get("resting_hr") for m in health_metrics if m.get("resting_hr") is not None]
+        if hr_values:
+            avg_hr = sum(hr_values) / len(hr_values)
+            trend = calculate_trend(hr_values)
+            summary.append(f"Resting Heart Rate: {avg_hr:.1f} bpm - {trend}")
+            summary.append(f"  Daily values: {[int(v) for v in hr_values]} bpm")
 
         # Data period
-        summary.append(f"Data points: {len(health_metrics)} days, {len(mood_ratings)} mood ratings")
+        summary.append(f"\nData period: {len(health_metrics)} days of health metrics, {len(mood_ratings)} mood ratings")
 
         return "\n".join(summary)
 

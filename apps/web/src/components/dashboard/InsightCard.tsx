@@ -82,7 +82,7 @@ const InsightCard = ({ insight }: InsightCardProps) => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold text-gray-900">{insight.title}</h3>
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+              <span className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium whitespace-nowrap inline-flex items-center justify-center">
                 {INSIGHT_TYPE_LABELS[insight.insight_type] || insight.insight_type}
               </span>
             </div>
