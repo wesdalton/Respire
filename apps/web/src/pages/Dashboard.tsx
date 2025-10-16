@@ -178,12 +178,12 @@ export default function Dashboard() {
         )}
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mb-8">
           <MetricsCard
             title="Recovery"
             value={metrics?.latest_recovery ?? '--'}
             unit="%"
-            icon={<Activity className="w-6 h-6" />}
+            icon={<Activity />}
             trend={getTrend(metrics?.latest_recovery, 70)}
             color="blue"
           />
@@ -191,7 +191,7 @@ export default function Dashboard() {
             title="HRV"
             value={metrics?.latest_hrv ?? '--'}
             unit="ms"
-            icon={<Heart className="w-6 h-6" />}
+            icon={<Heart />}
             trend={getTrend(metrics?.latest_hrv, 50)}
             color="green"
           />
@@ -199,7 +199,7 @@ export default function Dashboard() {
             title={latestMoodIsToday ? "Mood (Today)" : latestMood ? `Mood (${new Date(latestMood.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})` : "Mood"}
             value={metrics?.latest_mood ?? '--'}
             unit="/10"
-            icon={<Zap className="w-6 h-6" />}
+            icon={<Zap />}
             trend={getTrend(metrics?.latest_mood, 7)}
             color="purple"
             subtitle={!latestMoodIsToday && metrics?.latest_mood ? 'No mood logged today' : undefined}
@@ -208,7 +208,7 @@ export default function Dashboard() {
             title="Sleep Quality"
             value={metrics?.latest_sleep_quality ?? '--'}
             unit="%"
-            icon={<Moon className="w-6 h-6" />}
+            icon={<Moon />}
             trend={getTrend(metrics?.latest_sleep_quality, 75)}
             color="orange"
           />
