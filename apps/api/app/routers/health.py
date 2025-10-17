@@ -564,22 +564,36 @@ async def get_dashboard(
     )
     selected_mood = selected_mood_result.scalar_one_or_none()
 
-    # Get burnout score for the selected date (or closest available)
-    selected_burnout_result = await db.execute(
+    # Get burnout score for the exact selected date
+    exact_burnout_result = await db.execute(
         select(BurnoutScore).where(
             and_(
                 BurnoutScore.user_id == user_id,
-                BurnoutScore.date <= selected_date
+                BurnoutScore.date == selected_date
             )
-        ).order_by(BurnoutScore.date.desc()).limit(1)
+        )
     )
-    selected_burnout = selected_burnout_result.scalar_one_or_none()
+    exact_burnout = exact_burnout_result.scalar_one_or_none()
+
+    # If no exact match, get closest available (for display purposes)
+    if not exact_burnout:
+        closest_burnout_result = await db.execute(
+            select(BurnoutScore).where(
+                and_(
+                    BurnoutScore.user_id == user_id,
+                    BurnoutScore.date <= selected_date
+                )
+            ).order_by(BurnoutScore.date.desc()).limit(1)
+        )
+        selected_burnout = closest_burnout_result.scalar_one_or_none()
+    else:
+        selected_burnout = exact_burnout
 
     # Auto-calculate burnout if missing or stale for selected date
     should_calculate = False
-    if not selected_burnout:
+    if not exact_burnout:
         should_calculate = True
-    elif selected_burnout.calculated_at < datetime.now(timezone.utc) - timedelta(hours=24):
+    elif exact_burnout.calculated_at < datetime.now(timezone.utc) - timedelta(hours=24):
         should_calculate = True
 
     if should_calculate and (health_metrics or mood_ratings):
@@ -636,20 +650,31 @@ async def get_dashboard(
                     mood_ratings=mood_dicts
                 )
 
-                # Store burnout score for selected date
-                new_burnout = BurnoutScore(
-                    user_id=user_id,
-                    date=selected_date,
-                    overall_risk_score=risk_analysis["overall_risk_score"],
-                    risk_factors=risk_analysis["risk_factors"],
-                    confidence_score=risk_analysis["confidence_score"],
-                    data_points_used=risk_analysis["data_points_used"]
-                )
-
-                db.add(new_burnout)
-                await db.commit()
-                await db.refresh(new_burnout)
-                selected_burnout = new_burnout
+                # Update or insert burnout score for selected date
+                if exact_burnout:
+                    # Update existing record
+                    exact_burnout.overall_risk_score = risk_analysis["overall_risk_score"]
+                    exact_burnout.risk_factors = risk_analysis["risk_factors"]
+                    exact_burnout.confidence_score = risk_analysis["confidence_score"]
+                    exact_burnout.data_points_used = risk_analysis["data_points_used"]
+                    exact_burnout.calculated_at = datetime.now(timezone.utc)
+                    await db.commit()
+                    await db.refresh(exact_burnout)
+                    selected_burnout = exact_burnout
+                else:
+                    # Insert new record
+                    new_burnout = BurnoutScore(
+                        user_id=user_id,
+                        date=selected_date,
+                        overall_risk_score=risk_analysis["overall_risk_score"],
+                        risk_factors=risk_analysis["risk_factors"],
+                        confidence_score=risk_analysis["confidence_score"],
+                        data_points_used=risk_analysis["data_points_used"]
+                    )
+                    db.add(new_burnout)
+                    await db.commit()
+                    await db.refresh(new_burnout)
+                    selected_burnout = new_burnout
 
 
         except Exception as e:
