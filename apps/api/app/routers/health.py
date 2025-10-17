@@ -453,6 +453,12 @@ async def get_dashboard(
 
     Returns summary metrics, recent data, latest burnout score, and latest insight.
     """
+    # Get WHOOP connection for last_synced_at
+    whoop_result = await db.execute(
+        select(WHOOPConnection).where(WHOOPConnection.user_id == user_id)
+    )
+    whoop_connection = whoop_result.scalar_one_or_none()
+
     # Get latest health metrics (last 30 days for display)
     thirty_days_ago = date.today() - timedelta(days=30)
 
@@ -634,7 +640,7 @@ async def get_dashboard(
         burnout_trend=burnout_trend,
         days_tracked=total_days_tracked,  # Total across all time, not just recent
         mood_entries=total_mood_entries,  # Total mood entries
-        last_sync=health_metrics[-1].created_at if health_metrics else None
+        last_sync=whoop_connection.last_synced_at if whoop_connection and whoop_connection.last_synced_at else None
     )
 
     # Convert to response schemas
