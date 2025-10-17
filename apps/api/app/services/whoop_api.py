@@ -84,9 +84,6 @@ class WHOOPAPIClient:
                 json=json_data
             )
 
-            if response.status_code >= 400:
-                print(f"❌ WHOOP API Error: {response.status_code} - {url}")
-
             response.raise_for_status()
             return response.json()
 
@@ -331,17 +328,23 @@ class WHOOPAPIClient:
         if not end_date:
             end_date = date.today()
 
+
         # Fetch all data types in parallel (max limit is 25 per WHOOP API)
         cycles_data = await self.get_cycles(start=start_date, end=end_date, limit=25)
         recovery_data = await self.get_recovery(start=start_date, end=end_date, limit=25)
         sleep_data = await self.get_sleep(start=start_date, end=end_date, limit=25)
         workout_data = await self.get_workouts(start=start_date, end=end_date, limit=25)
 
+        cycles = cycles_data.get("records", [])
+        recovery = recovery_data.get("records", [])
+        sleep = sleep_data.get("records", [])
+        workouts = workout_data.get("records", [])
+
         return {
-            "cycles": cycles_data.get("records", []),
-            "recovery": recovery_data.get("records", []),
-            "sleep": sleep_data.get("records", []),
-            "workouts": workout_data.get("records", []),
+            "cycles": cycles,
+            "recovery": recovery,
+            "sleep": sleep,
+            "workouts": workouts,
         }
 
     async def get_latest_recovery(self) -> Optional[Dict[str, Any]]:

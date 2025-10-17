@@ -579,10 +579,8 @@ async def get_dashboard(
     should_calculate = False
     if not selected_burnout:
         should_calculate = True
-        print(f"🔄 No burnout score found for {selected_date}, will auto-calculate")
     elif selected_burnout.calculated_at < datetime.now(timezone.utc) - timedelta(hours=24):
         should_calculate = True
-        print(f"🔄 Burnout score is stale (>24h old), will recalculate")
 
     if should_calculate and (health_metrics or mood_ratings):
         try:
@@ -653,11 +651,10 @@ async def get_dashboard(
                 await db.refresh(new_burnout)
                 selected_burnout = new_burnout
 
-                print(f"✅ Auto-calculated burnout for {selected_date}: {risk_analysis['overall_risk_score']}%")
 
         except Exception as e:
             # Don't fail dashboard if burnout calculation fails
-            print(f"⚠️ Auto-calculation failed (non-critical): {e}")
+            pass
 
     # Determine burnout trend for selected date
     burnout_trend = None
