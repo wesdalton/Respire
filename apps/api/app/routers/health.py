@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models import HealthMetric, MoodRating, BurnoutScore, AIInsight
+from app.models import HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection
 from app.schemas import (
     HealthMetricResponse,
     BurnoutScoreResponse,
