@@ -32,7 +32,8 @@ class SupabaseAuthService:
         self,
         email: str,
         password: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        redirect_to: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Register new user with Supabase Auth
@@ -41,6 +42,7 @@ class SupabaseAuthService:
             email: User email
             password: User password
             metadata: Additional user metadata
+            redirect_to: URL to redirect to after email confirmation
 
         Returns:
             User data and session tokens
@@ -48,14 +50,23 @@ class SupabaseAuthService:
         Raises:
             httpx.HTTPStatusError: If registration fails
         """
+        # Use production URL if not specified
+        if not redirect_to:
+            redirect_to = os.getenv("APP_URL", "https://app.tryrespire.ai")
+
+        payload = {
+            "email": email,
+            "password": password,
+            "data": metadata or {},
+            "options": {
+                "emailRedirectTo": f"{redirect_to}/auth/confirm"
+            }
+        }
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.auth_url}/signup",
-                json={
-                    "email": email,
-                    "password": password,
-                    "data": metadata or {}
-                },
+                json=payload,
                 headers={
                     "apikey": self.supabase_anon_key,
                     "Content-Type": "application/json"
