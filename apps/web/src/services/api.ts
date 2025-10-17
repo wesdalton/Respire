@@ -115,6 +115,14 @@ class APIClient {
     return data;
   }
 
+  async confirmEmail(tokenHash: string, type: string) {
+    const { data } = await this.client.post('/auth/confirm', {
+      token_hash: tokenHash,
+      type,
+    });
+    return data;
+  }
+
   async signout() {
     // Demo mode: just clear demo flag
     if (this.isDemoMode()) {
@@ -283,6 +291,11 @@ class APIClient {
       return DemoDataService.deleteInsight(insightId);
     }
     const { data } = await this.client.delete<{ message: string }>(`/health/insights/${insightId}`);
+    return data;
+  }
+
+  async deleteAllUserData(): Promise<{ message: string }> {
+    const { data } = await this.client.delete<{ message: string }>('/auth/delete-all-data');
     return data;
   }
 

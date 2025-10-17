@@ -117,6 +117,47 @@ class SupabaseAuthService:
 
             return response.json()
 
+    async def verify_otp(
+        self,
+        token_hash: str,
+        type: str = "email"
+    ) -> Dict[str, Any]:
+        """
+        Verify email confirmation token
+
+        Args:
+            token_hash: Token hash from confirmation email
+            type: Type of verification (email, sms, etc.)
+
+        Returns:
+            User data and session tokens
+
+        Raises:
+            Exception: If verification fails
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.auth_url}/verify",
+                json={
+                    "token_hash": token_hash,
+                    "type": type
+                },
+                headers={
+                    "apikey": self.supabase_anon_key,
+                    "Content-Type": "application/json"
+                }
+            )
+
+            if response.status_code != 200:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get("error_description") or error_data.get("msg") or "Verification failed"
+                except Exception:
+                    error_message = "Invalid or expired confirmation link"
+                raise Exception(error_message)
+
+            return response.json()
+
     async def sign_out(self, access_token: str) -> bool:
         """
         Sign out user and revoke token

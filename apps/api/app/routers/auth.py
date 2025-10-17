@@ -164,6 +164,34 @@ async def sign_in(request: SignInRequest):
             )
 
 
+@router.post("/confirm", response_model=AuthResponse)
+async def confirm_email(token_hash: str, type: str = "email"):
+    """
+    Confirm email address with token from confirmation email
+
+    Returns access token and user profile after successful confirmation.
+    """
+    try:
+        result = await supabase_auth.verify_otp(
+            token_hash=token_hash,
+            type=type
+        )
+
+        return AuthResponse(
+            access_token=result["access_token"],
+            refresh_token=result["refresh_token"],
+            expires_in=result.get("expires_in", 3600),
+            user=result["user"]
+        )
+
+    except Exception as e:
+        error_message = str(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message
+        )
+
+
 @router.post("/signout")
 async def sign_out(user_id: str = Depends(get_current_user)):
     """
@@ -316,6 +344,38 @@ async def upload_profile_picture(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload file: {str(e)}"
+        )
+
+
+@router.delete("/delete-all-data")
+async def delete_all_user_data(user_id: str = Depends(get_current_user)):
+    """
+    Delete all user data (health metrics, moods, insights, burnout scores, WHOOP connection)
+
+    This does NOT delete the user account itself, only their data.
+    """
+    from sqlalchemy import select, delete
+    from app.database import get_db
+    from app.models import HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection
+
+    try:
+        async for db in get_db():
+            # Delete all data for this user
+            await db.execute(delete(HealthMetric).where(HealthMetric.user_id == user_id))
+            await db.execute(delete(MoodRating).where(MoodRating.user_id == user_id))
+            await db.execute(delete(BurnoutScore).where(BurnoutScore.user_id == user_id))
+            await db.execute(delete(AIInsight).where(AIInsight.user_id == user_id))
+            await db.execute(delete(WHOOPConnection).where(WHOOPConnection.user_id == user_id))
+
+            await db.commit()
+
+            return {
+                "message": "All account data has been permanently deleted"
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete user data: {str(e)}"
         )
 
 

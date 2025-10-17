@@ -8,6 +8,7 @@ import { Layout } from './components/layout/Layout';
 // Pages
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import AuthConfirm from './pages/AuthConfirm';
 import Dashboard from './pages/Dashboard';
 import Mood from './pages/Mood';
 import History from './pages/History';
@@ -36,6 +37,7 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/auth/confirm" element={<AuthConfirm />} />
 
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>

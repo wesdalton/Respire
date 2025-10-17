@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { apiClient } from '../services/api';
-import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
+import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save, Trash2, X } from 'lucide-react';
 import { Avatar } from '../components/common/Avatar';
 import type { WHOOPConnection } from '../types';
 
@@ -23,6 +23,11 @@ export default function Settings() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [savingProfile, setSavingProfile] = useState(false);
+
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadWhoopConnection();
@@ -155,6 +160,25 @@ export default function Settings() {
       setError(err.response?.data?.detail || 'Failed to update profile');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleDeleteAllData = async () => {
+    if (deleteConfirmText !== 'ERASE') {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setError('');
+
+      await apiClient.deleteAllUserData();
+
+      // Sign out and redirect to login
+      await signout();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete account data');
+      setIsDeleting(false);
     }
   };
 
@@ -430,16 +454,114 @@ export default function Settings() {
               <p className="text-sm text-gray-600">Irreversible actions for your account</p>
             </div>
 
-            <button
-              onClick={handleSignOut}
-              className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 font-medium"
-            >
-              <LogOut className="w-5 h-5" />
-              Sign Out
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleSignOut}
+                className="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-2 font-medium"
+              >
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </button>
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full sm:w-auto px-6 py-3 bg-white text-red-600 border-2 border-red-600 rounded-lg hover:bg-red-50 transition flex items-center justify-center gap-2 font-medium"
+              >
+                <Trash2 className="w-5 h-5" />
+                Delete All Account Data
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete All Account Data</h3>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                }}
+                className="text-gray-400 hover:text-gray-600 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-sm text-gray-700 mb-4">
+                This action will <span className="font-semibold text-red-600">permanently delete</span>:
+              </p>
+              <ul className="text-sm text-gray-600 space-y-2 mb-4">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">•</span>
+                  <span>All your health metrics and WHOOP data</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">•</span>
+                  <span>All mood ratings and journal entries</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">•</span>
+                  <span>All AI-generated insights and recommendations</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 mt-0.5">•</span>
+                  <span>Your WHOOP connection</span>
+                </li>
+              </ul>
+              <p className="text-sm text-gray-700 font-medium mb-4">
+                This action cannot be undone. Your account will remain active, but all data will be erased.
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-red-600">ERASE</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Type ERASE here"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={isDeleting}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAllData}
+                disabled={deleteConfirmText !== 'ERASE' || isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete All Data'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
