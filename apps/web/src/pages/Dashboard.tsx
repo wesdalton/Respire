@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Heart, Zap, Moon, RefreshCw, AlertCircle } from 'lucide-react';
+import { Activity, Heart, Zap, Moon, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import MetricsCard from '../components/dashboard/MetricsCard';
@@ -13,7 +13,39 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  const { dashboard, isLoading, error, refetch, sync, isSyncing } = useDashboard();
+
+  // Start with undefined to let backend determine the initial date
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Format date as YYYY-MM-DD for API (undefined on first load)
+  const selectedDateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : undefined;
+
+  const { dashboard, isLoading, error, refetch, sync, isSyncing } = useDashboard(selectedDateStr);
+
+  // Set initial date from backend response
+  if (!selectedDate && dashboard?.metrics) {
+    // Use the date from the first health data point or mood
+    const firstHealthDate = dashboard.recent_health_data?.[dashboard.recent_health_data.length - 1]?.date;
+    const firstMoodDate = dashboard.recent_moods?.[dashboard.recent_moods.length - 1]?.date;
+
+    let initialDate: string | null = null;
+    if (firstHealthDate && firstMoodDate) {
+      initialDate = firstHealthDate > firstMoodDate ? firstHealthDate : firstMoodDate;
+    } else if (firstHealthDate) {
+      initialDate = firstHealthDate;
+    } else if (firstMoodDate) {
+      initialDate = firstMoodDate;
+    }
+
+    if (initialDate) {
+      setSelectedDate(new Date(initialDate));
+    } else {
+      // Fallback to yesterday if no data
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      setSelectedDate(yesterday);
+    }
+  }
   const queryClient = useQueryClient();
   const [showMoodEntry, setShowMoodEntry] = useState(false);
   const [moodSubmitting, setMoodSubmitting] = useState(false);
@@ -54,6 +86,57 @@ export default function Dashboard() {
 
   const handleRetry = () => {
     refetch();
+  };
+
+  const handlePrevDay = () => {
+    if (!selectedDate) return;
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const handleNextDay = () => {
+    if (!selectedDate) return;
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    // Don't allow going beyond today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (newDate <= today) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  const formatDateDisplay = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
+    if (compareDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (compareDate.getTime() === yesterday.getTime()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
+
+  const isToday = () => {
+    if (!selectedDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(selectedDate);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate.getTime() === today.getTime();
   };
 
   // Determine trend based on comparison with average
@@ -176,6 +259,35 @@ export default function Dashboard() {
                 isEditing={hasTodaysMood}
               />
             )}
+          </div>
+        )}
+
+        {/* Date Navigator */}
+        {selectedDate && (
+          <div className="flex items-center justify-center mb-6">
+            <button
+              onClick={handlePrevDay}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Previous day"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="mx-4 min-w-[200px] text-center">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {formatDateDisplay(selectedDate)}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <button
+              onClick={handleNextDay}
+              disabled={isToday()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="Next day"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
           </div>
         )}
 

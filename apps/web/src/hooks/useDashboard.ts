@@ -4,16 +4,48 @@ import { apiClient } from '../services/api';
 
 const AUTO_SYNC_INTERVAL_HOURS = 6; // Auto-sync if last sync was more than 6 hours ago
 
-export function useDashboard() {
+export function useDashboard(selectedDate?: string) {
   const queryClient = useQueryClient();
   const autoSyncAttempted = useRef(false);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: () => apiClient.getDashboard(),
+    queryKey: ['dashboard', selectedDate],
+    queryFn: () => apiClient.getDashboard(selectedDate),
     refetchInterval: 60000, // Refresh every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
+
+  // Prefetch adjacent dates for instant navigation
+  useEffect(() => {
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+
+      // Prefetch previous day
+      const prevDate = new Date(date);
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split('T')[0];
+      queryClient.prefetchQuery({
+        queryKey: ['dashboard', prevDateStr],
+        queryFn: () => apiClient.getDashboard(prevDateStr),
+        staleTime: 5 * 60 * 1000,
+      });
+
+      // Prefetch next day (if not future)
+      const nextDate = new Date(date);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (nextDate <= today) {
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        queryClient.prefetchQuery({
+          queryKey: ['dashboard', nextDateStr],
+          queryFn: () => apiClient.getDashboard(nextDateStr),
+          staleTime: 5 * 60 * 1000,
+        });
+      }
+    }
+  }, [selectedDate, queryClient]);
 
   const syncMutation = useMutation({
     mutationFn: () => apiClient.syncWHOOP(),

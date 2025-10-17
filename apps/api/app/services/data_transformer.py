@@ -21,12 +21,21 @@ class WHOOPDataTransformer:
         Returns:
             Dictionary with recovery metrics
         """
+        score_state = recovery.get("score_state")
         score = recovery.get("score", {})
 
+        # Only extract if score is present and state is SCORED
+        if score_state == "SCORED" and score:
+            return {
+                "recovery_score": score.get("recovery_score"),
+                "resting_hr": score.get("resting_heart_rate"),
+                "hrv": score.get("hrv_rmssd_milli"),
+            }
+
         return {
-            "recovery_score": score.get("recovery_score"),
-            "resting_hr": score.get("resting_heart_rate"),
-            "hrv": score.get("hrv_rmssd_milli"),
+            "recovery_score": None,
+            "resting_hr": None,
+            "hrv": None,
         }
 
     @staticmethod
@@ -42,17 +51,29 @@ class WHOOPDataTransformer:
         """
         score = sleep.get("score", {})
 
-        # Convert milliseconds to minutes
-        duration_ms = sleep.get("duration_milli", 0)
-        latency_ms = sleep.get("sleep_performance_percentage", {}).get("latency_milli", 0)
-        time_in_bed_ms = sleep.get("time_in_bed_milli", 0)
+        # Calculate duration from start and end timestamps
+        start = sleep.get("start")
+        end = sleep.get("end")
+        duration_minutes = None
+
+        if start and end:
+            try:
+                start_dt = datetime.fromisoformat(start.replace("Z", "+00:00"))
+                end_dt = datetime.fromisoformat(end.replace("Z", "+00:00"))
+                duration_seconds = (end_dt - start_dt).total_seconds()
+                duration_minutes = int(duration_seconds / 60)
+            except Exception:
+                pass
+
+        # Get sleep performance from score
+        sleep_performance = score.get("sleep_performance_percentage") if score else None
 
         return {
-            "sleep_duration_minutes": duration_ms // 60000 if duration_ms else None,
-            "sleep_quality_score": score.get("sleep_performance_percentage"),
-            "sleep_latency_minutes": latency_ms // 60000 if latency_ms else None,
-            "time_in_bed_minutes": time_in_bed_ms // 60000 if time_in_bed_ms else None,
-            "sleep_consistency_score": score.get("sleep_consistency_percentage"),
+            "sleep_duration_minutes": duration_minutes,
+            "sleep_quality_score": sleep_performance,
+            "sleep_latency_minutes": None,  # Not directly available in v2
+            "time_in_bed_minutes": duration_minutes,  # Use same as duration for now
+            "sleep_consistency_score": score.get("sleep_consistency_percentage") if score else None,
         }
 
     @staticmethod
@@ -72,14 +93,15 @@ class WHOOPDataTransformer:
         # Count workouts for this cycle
         workout_count = len(workouts)
 
-        # Get HR metrics from cycle
-        hr_data = score.get("kilojoule", {})
+        strain = score.get("strain") if score else None
+        avg_hr = score.get("average_heart_rate") if score else None
+        max_hr = score.get("max_heart_rate") if score else None
 
         return {
-            "day_strain": score.get("strain"),
+            "day_strain": strain,
             "workout_count": workout_count,
-            "average_hr": score.get("average_heart_rate"),
-            "max_hr": score.get("max_heart_rate"),
+            "average_hr": avg_hr,
+            "max_hr": max_hr,
         }
 
     @staticmethod

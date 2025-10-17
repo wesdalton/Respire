@@ -168,11 +168,12 @@ class APIClient {
   }
 
   // Dashboard
-  async getDashboard(): Promise<DashboardData> {
+  async getDashboard(selectedDate?: string): Promise<DashboardData> {
     if (this.isDemoMode()) {
       return DemoDataService.getDashboard();
     }
-    const { data } = await this.client.get<DashboardData>('/health/dashboard');
+    const params = selectedDate ? { selected_date: selectedDate } : {};
+    const { data } = await this.client.get<DashboardData>('/health/dashboard', { params });
     return data;
   }
 

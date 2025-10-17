@@ -106,7 +106,6 @@ async def whoop_callback(
         await db.refresh(connection)
 
         # Trigger initial sync in the background (last 90 days)
-        print(f"✅ WHOOP connected successfully, triggering initial sync...")
         try:
             from datetime import timedelta
 
@@ -150,11 +149,9 @@ async def whoop_callback(
             connection.last_synced_at = datetime.utcnow()
             await db.commit()
 
-            print(f"✅ Initial sync complete: {records_inserted} records inserted")
 
         except Exception as sync_error:
             # Don't fail the connection if sync fails - user can manually sync
-            print(f"⚠️  Initial sync failed (non-critical): {str(sync_error)}")
             # Rollback any partial sync changes but keep the connection
             await db.rollback()
             # Re-commit just the connection
@@ -174,7 +171,6 @@ async def whoop_callback(
         await db.rollback()
         import traceback
         error_details = traceback.format_exc()
-        print(f"❌ WHOOP callback error: {error_details}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to connect WHOOP account: {str(e)}"
@@ -338,7 +334,6 @@ async def manual_sync(
         # Auto-calculate burnout after sync if we have enough data
         if records_inserted + records_updated > 0:
             try:
-                print(f"🔄 Triggering burnout calculation after sync...")
                 from app.services.burnout_calculator import burnout_calculator
                 from app.models import BurnoutScore, MoodRating
 
@@ -423,12 +418,10 @@ async def manual_sync(
 
                     await db.commit()
 
-                    print(f"✅ Burnout calculated after sync: {risk_analysis['overall_risk_score']}%")
 
             except Exception as calc_error:
                 # Don't fail sync if burnout calculation fails
                 await db.rollback()
-                print(f"⚠️ Burnout auto-calc after sync failed (non-critical): {calc_error}")
 
         return {
             "message": "Sync completed successfully",
@@ -453,7 +446,6 @@ async def manual_sync(
         await db.rollback()
         import traceback
         error_details = traceback.format_exc()
-        print(f"❌ WHOOP sync error: {error_details}")
 
         # Check if it's an authentication error
         error_str = str(e)

@@ -47,6 +47,7 @@ const BurnoutGauge = ({ risk_score, risk_level }: BurnoutGaugeProps) => {
               textColor: config.color,
               trailColor: '#f3f4f6',
               strokeLinecap: 'round',
+              pathTransitionDuration: 0.3,
             })}
           />
         </div>
