@@ -33,6 +33,11 @@ class SignInRequest(BaseModel):
     password: str
 
 
+class ConfirmEmailRequest(BaseModel):
+    token_hash: str
+    type: str = "email"
+
+
 class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -165,7 +170,7 @@ async def sign_in(request: SignInRequest):
 
 
 @router.post("/confirm", response_model=AuthResponse)
-async def confirm_email(token_hash: str, type: str = "email"):
+async def confirm_email(request: ConfirmEmailRequest):
     """
     Confirm email address with token from confirmation email
 
@@ -173,8 +178,8 @@ async def confirm_email(token_hash: str, type: str = "email"):
     """
     try:
         result = await supabase_auth.verify_otp(
-            token_hash=token_hash,
-            type=type
+            token_hash=request.token_hash,
+            type=request.type
         )
 
         return AuthResponse(
