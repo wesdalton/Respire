@@ -2,7 +2,7 @@
 Data Transformation Service
 Transform WHOOP API v2 data into internal HealthMetric format
 """
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Any, Optional
 from uuid import UUID
 
@@ -192,35 +192,62 @@ class WHOOPDataTransformer:
                 grouped[cycle_date] = {}
             grouped[cycle_date]["cycle"] = cycle_data
 
-        # Group recovery by date (use cycle's date)
+        # Group recovery by date (use sleep end date - when you wake up)
         for recovery_data in recovery:
-            cycle_id = recovery_data.get("cycle_id")
-            if not cycle_id:
+            sleep_id = recovery_data.get("sleep_id")
+            if not sleep_id:
                 continue
 
-            # Find matching cycle to get date
-            matching_cycle = next(
-                (c for c in cycles if c.get("id") == cycle_id),
+            # Find matching sleep to get wake-up date
+            matching_sleep = next(
+                (s for s in sleep if s.get("id") == sleep_id),
                 None
             )
-            if matching_cycle:
-                cycle_date = datetime.fromisoformat(
-                    matching_cycle["start"].replace("Z", "+00:00")
-                ).date()
+            if matching_sleep and matching_sleep.get("end"):
+                # Parse end time and apply timezone offset
+                end_time_str = matching_sleep["end"]
+                timezone_offset = matching_sleep.get("timezone_offset", "+00:00")
 
-                if cycle_date not in grouped:
-                    grouped[cycle_date] = {}
-                grouped[cycle_date]["recovery"] = recovery_data
+                # WHOOP times are in UTC, apply timezone_offset to get local date
+                end_dt_utc = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+
+                # Parse timezone offset (e.g., "-05:00" -> timedelta)
+                sign = 1 if timezone_offset[0] == '+' else -1
+                hours, minutes = map(int, timezone_offset[1:].split(':'))
+                tz_offset = timedelta(hours=sign * hours, minutes=sign * minutes)
+
+                # Apply offset to get local time, then extract date
+                local_dt = end_dt_utc + tz_offset
+                recovery_date = local_dt.date()
+
+                # Debug logging
+                print(f"DEBUG Recovery: sleep_id={sleep_id}, end_utc={end_time_str}, tz_offset={timezone_offset}, local_date={recovery_date}")
+
+                if recovery_date not in grouped:
+                    grouped[recovery_date] = {}
+                grouped[recovery_date]["recovery"] = recovery_data
 
         # Group sleep by date
         for sleep_data in sleep:
             if not sleep_data.get("end"):
                 continue
 
-            # Use end date for sleep (when you woke up)
-            sleep_date = datetime.fromisoformat(
-                sleep_data["end"].replace("Z", "+00:00")
-            ).date()
+            # Parse end time and apply timezone offset
+            end_time_str = sleep_data["end"]
+            timezone_offset = sleep_data.get("timezone_offset", "+00:00")
+
+            # WHOOP times are in UTC, but we need to apply timezone_offset to get local date
+            # timezone_offset format: "-05:00" or "+00:00"
+            end_dt_utc = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+
+            # Parse timezone offset (e.g., "-05:00" -> timedelta)
+            sign = 1 if timezone_offset[0] == '+' else -1
+            hours, minutes = map(int, timezone_offset[1:].split(':'))
+            tz_offset = timedelta(hours=sign * hours, minutes=sign * minutes)
+
+            # Apply offset to get local time, then extract date
+            local_dt = end_dt_utc + tz_offset
+            sleep_date = local_dt.date()
 
             if sleep_date not in grouped:
                 grouped[sleep_date] = {}

@@ -4,6 +4,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { apiClient } from '../services/api';
 import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save, Trash2, X } from 'lucide-react';
 import { Avatar } from '../components/common/Avatar';
+import { formatDateTime } from '../utils/dateUtils';
 import type { WHOOPConnection } from '../types';
 
 export default function Settings() {
@@ -390,13 +391,7 @@ export default function Settings() {
                     <div>
                       <label className="block text-sm font-medium text-gray-500 mb-1">Connected At</label>
                       <p className="text-gray-900">
-                        {new Date(whoopConnection.connected_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {formatDateTime(whoopConnection.connected_at)}
                       </p>
                     </div>
 
@@ -404,13 +399,7 @@ export default function Settings() {
                       <div>
                         <label className="block text-sm font-medium text-gray-500 mb-1">Last Synced</label>
                         <p className="text-gray-900">
-                          {new Date(whoopConnection.last_synced_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatDateTime(whoopConnection.last_synced_at)}
                         </p>
                       </div>
                     )}
