@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.database import init_db, close_db, engine
-from app.routers import whoop, auth, mood, health
+from app.routers import whoop, auth, mood, health, oura
 
 
 @asynccontextmanager
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Respire API",
-    description="AI-powered burnout prevention platform using WHOOP data",
+    description="AI-powered burnout prevention platform using WHOOP and Oura data",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -75,6 +75,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(whoop.router)
+app.include_router(oura.router)
 app.include_router(mood.router)
 app.include_router(health.router)
 

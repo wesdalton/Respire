@@ -285,5 +285,120 @@ class WHOOPDataTransformer:
         return health_metrics
 
 
-# Singleton instance
+class OuraDataTransformer:
+    """Transform Oura API data to HealthMetric models"""
+
+    @staticmethod
+    def transform_to_health_metrics(
+        daily_sleep: List[Dict[str, Any]],
+        daily_activity: List[Dict[str, Any]],
+        daily_readiness: List[Dict[str, Any]],
+        heart_rate_data: List[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Transform Oura data into HealthMetric format
+
+        Args:
+            daily_sleep: Daily sleep summaries
+            daily_activity: Daily activity summaries
+            daily_readiness: Daily readiness scores
+            heart_rate_data: Heart rate time series (optional)
+
+        Returns:
+            List of health metric dictionaries
+        """
+        # Index data by date for efficient lookup
+        sleep_by_date = {s["day"]: s for s in daily_sleep if s.get("day")}
+        activity_by_date = {a["day"]: a for a in daily_activity if a.get("day")}
+        readiness_by_date = {r["day"]: r for r in daily_readiness if r.get("day")}
+
+        # Get all unique dates
+        all_dates = set(sleep_by_date.keys()) | set(activity_by_date.keys()) | set(readiness_by_date.keys())
+
+        health_metrics = []
+
+        for date_str in sorted(all_dates):
+            daily_sleep_data = sleep_by_date.get(date_str, {})
+            daily_activity_data = activity_by_date.get(date_str, {})
+            daily_readiness_data = readiness_by_date.get(date_str, {})
+
+            health_metric = {
+                "date": datetime.fromisoformat(date_str).date(),
+            }
+
+            # Sleep metrics
+            if daily_sleep_data:
+                contributors = daily_sleep_data.get("contributors", {})
+
+                # Sleep duration (in seconds, convert to minutes)
+                total_sleep = daily_sleep_data.get("total_sleep_duration")
+                if total_sleep:
+                    health_metric["sleep_duration_minutes"] = int(total_sleep / 60)
+
+                # Sleep quality score (0-100)
+                sleep_score = daily_sleep_data.get("score")
+                if sleep_score:
+                    health_metric["sleep_quality_score"] = sleep_score
+
+                # Sleep latency (in seconds, convert to minutes)
+                latency = contributors.get("latency")
+                if latency:
+                    health_metric["sleep_latency_minutes"] = int(latency / 60)
+
+                # Time in bed (in seconds, convert to minutes)
+                time_in_bed = daily_sleep_data.get("time_in_bed")
+                if time_in_bed:
+                    health_metric["time_in_bed_minutes"] = int(time_in_bed / 60)
+
+                # Resting heart rate - use lowest heart rate as proxy
+                lowest_hr = daily_sleep_data.get("lowest_heart_rate")
+                if lowest_hr:
+                    health_metric["resting_hr"] = lowest_hr
+
+            # Activity metrics
+            if daily_activity_data:
+                # Day Strain - Direct mapping of activity score (0-100)
+                activity_score = daily_activity_data.get("score")
+                if activity_score:
+                    health_metric["day_strain"] = float(activity_score)
+
+                # Average heart rate
+                avg_hr = daily_activity_data.get("average_heart_rate")
+                if avg_hr:
+                    health_metric["average_hr"] = avg_hr
+
+                # Max heart rate
+                max_hr = daily_activity_data.get("max_heart_rate")
+                if max_hr:
+                    health_metric["max_hr"] = max_hr
+
+            # Readiness metrics
+            if daily_readiness_data:
+                # Recovery score from readiness
+                readiness_score = daily_readiness_data.get("score")
+                if readiness_score:
+                    health_metric["recovery_score"] = readiness_score
+
+                # HRV from readiness contributors
+                contributors = daily_readiness_data.get("contributors", {})
+                hrv_balance = contributors.get("hrv_balance")
+                if hrv_balance:
+                    # HRV balance is a score, not actual HRV
+                    # Try to get actual HRV from temperature data or use balance as proxy
+                    health_metric["hrv"] = float(hrv_balance)
+
+            # Store raw data for reference
+            health_metric["raw_data"] = {
+                "sleep": daily_sleep_data,
+                "activity": daily_activity_data,
+                "readiness": daily_readiness_data
+            }
+
+            health_metrics.append(health_metric)
+
+        return health_metrics
+
+
+# Singleton instances
 whoop_transformer = WHOOPDataTransformer()
+oura_transformer = OuraDataTransformer()

@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
-import type { AuthResponse, DashboardData, HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection } from '../types';
+import type { AuthResponse, DashboardData, HealthMetric, MoodRating, BurnoutScore, AIInsight, WHOOPConnection, OuraConnection } from '../types';
 import DemoDataService from './DemoDataService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -339,6 +339,45 @@ class APIClient {
       return DemoDataService.disconnectWHOOP();
     }
     await this.client.delete('/whoop/connection');
+  }
+
+  // Oura endpoints
+  async getOuraConnection(): Promise<OuraConnection | null> {
+    try {
+      const { data } = await this.client.get('/oura/connection');
+      return data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async getOuraAuthURL(redirectUri: string) {
+    const { data } = await this.client.post('/oura/auth/authorize', {
+      redirect_uri: redirectUri,
+    });
+    return data;
+  }
+
+  async connectOura(code: string, redirectUri: string): Promise<OuraConnection> {
+    const { data } = await this.client.post('/oura/auth/callback', {
+      code,
+      redirect_uri: redirectUri,
+    });
+    return data;
+  }
+
+  async syncOura(startDate?: string, endDate?: string) {
+    const { data } = await this.client.post('/oura/sync/manual', null, {
+      params: { start_date: startDate, end_date: endDate },
+    });
+    return data;
+  }
+
+  async disconnectOura(): Promise<void> {
+    await this.client.delete('/oura/connection');
   }
 }
 

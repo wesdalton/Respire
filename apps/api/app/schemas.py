@@ -40,7 +40,7 @@ class HealthMetricBase(BaseModel):
     sleep_latency_minutes: Optional[int] = Field(None, ge=0)
     time_in_bed_minutes: Optional[int] = Field(None, ge=0)
     sleep_consistency_score: Optional[int] = None
-    day_strain: Optional[float] = Field(None, ge=0, le=21)
+    day_strain: Optional[float] = Field(None, ge=0, le=100)
     workout_count: int = 0
     average_hr: Optional[int] = None
     max_hr: Optional[int] = None
@@ -339,3 +339,62 @@ class DashboardResponse(BaseModel):
     latest_burnout_score: Optional[BurnoutScoreResponse] = None
     latest_insight: Optional[AIInsightResponse] = None
     pending_sync_jobs: int = 0
+
+
+# Oura Connection Schemas
+class OuraConnectionBase(BaseModel):
+    oura_user_id: Optional[str] = None
+    scope: Optional[List[str]] = None
+    sync_enabled: bool = True
+
+
+class OuraConnectionCreate(OuraConnectionBase):
+    access_token: str
+    refresh_token: str
+    token_expires_at: datetime
+
+
+class OuraConnectionResponse(OuraConnectionBase):
+    id: str
+    user_id: str
+    connected_at: datetime
+    last_synced_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Oura OAuth Schemas
+class OuraAuthRequest(BaseModel):
+    """Request to initiate Oura OAuth flow"""
+    redirect_uri: str = Field(..., description="Redirect URI registered with Oura")
+
+
+class OuraAuthResponse(BaseModel):
+    """Response with authorization URL"""
+    authorization_url: str
+    state: str
+
+
+class OuraTokenExchange(BaseModel):
+    """Exchange authorization code for tokens"""
+    code: str
+    redirect_uri: str
+
+
+class OuraSyncRequest(BaseModel):
+    """Request to sync Oura data"""
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+class OuraSyncResponse(BaseModel):
+    """Response from Oura sync"""
+    success: bool
+    records_synced: int
+    last_synced_at: Optional[datetime] = None
+
+
+class OuraDisconnectResponse(BaseModel):
+    """Response from Oura disconnect"""
+    success: bool
+    message: str

@@ -158,3 +158,20 @@ export interface WHOOPConnection {
   last_synced_at?: string;
   sync_enabled: boolean;
 }
+
+export interface OuraConnection {
+  id: string;
+  user_id: string;
+  oura_user_id?: string;
+  scope?: string[];
+  connected_at: string;
+  last_synced_at?: string;
+  sync_enabled: boolean;
+  webhook_enabled: boolean;
+}
+
+export interface IntegrationStatus {
+  whoop?: WHOOPConnection;
+  oura?: OuraConnection;
+  activeIntegration?: 'whoop' | 'oura' | null;
+}

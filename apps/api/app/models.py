@@ -32,8 +32,34 @@ class WHOOPConnection(Base):
     sync_enabled = Column(Boolean, default=True)
 
 
+class OuraConnection(Base):
+    """Oura OAuth connection and tokens"""
+    __tablename__ = "oura_connections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), nullable=False, unique=True)
+
+    # OAuth tokens
+    access_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=False)
+    token_expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    # Oura user info
+    oura_user_id = Column(String)
+    scope = Column(ARRAY(String))
+
+    # Connection metadata
+    connected_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_synced_at = Column(DateTime(timezone=True))
+    sync_enabled = Column(Boolean, default=True)
+
+    # Webhook configuration (optional)
+    webhook_subscription_id = Column(String)
+    webhook_enabled = Column(Boolean, default=False)
+
+
 class HealthMetric(Base):
-    """Health metrics from WHOOP"""
+    """Health metrics from WHOOP and Oura"""
     __tablename__ = "health_metrics"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -57,6 +83,9 @@ class HealthMetric(Base):
     workout_count = Column(Integer, default=0)
     average_hr = Column(Integer)
     max_hr = Column(Integer)
+
+    # Data source tracking
+    data_source = Column(String, default='whoop')  # 'whoop' or 'oura'
 
     # Metadata
     raw_data = Column(JSONB)

@@ -4,13 +4,15 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { apiClient } from '../services/api';
 import { Settings as SettingsIcon, Link as LinkIcon, LogOut, AlertCircle, CheckCircle, Loader, Save, Trash2, X } from 'lucide-react';
 import { Avatar } from '../components/common/Avatar';
-import type { WHOOPConnection } from '../types';
+import type { WHOOPConnection, OuraConnection } from '../types';
 
 export default function Settings() {
   usePageTitle('Settings');
   const { user, signout } = useAuth();
   const [whoopConnection, setWhoopConnection] = useState<WHOOPConnection | null>(null);
+  const [ouraConnection, setOuraConnection] = useState<OuraConnection | null>(null);
   const [loadingWhoop, setLoadingWhoop] = useState(true);
+  const [loadingOura, setLoadingOura] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -30,20 +32,34 @@ export default function Settings() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    loadWhoopConnection();
+    loadConnections();
   }, []);
 
-  const loadWhoopConnection = async () => {
+  const loadConnections = async () => {
+    setLoadingWhoop(true);
+    setLoadingOura(true);
     try {
-      setLoadingWhoop(true);
-      const connection = await apiClient.getWHOOPConnection();
-      setWhoopConnection(connection);
-    } catch (err: any) {
-      if (err.response?.status !== 404) {
-        console.error('Failed to load WHOOP connection:', err);
-      }
+      const [whoop, oura] = await Promise.all([
+        apiClient.getWHOOPConnection().catch(err => {
+          if (err.response?.status !== 404) {
+            console.error('Failed to load WHOOP connection:', err);
+          }
+          return null;
+        }),
+        apiClient.getOuraConnection().catch(err => {
+          if (err.response?.status !== 404) {
+            console.error('Failed to load Oura connection:', err);
+          }
+          return null;
+        }),
+      ]);
+      setWhoopConnection(whoop);
+      setOuraConnection(oura);
+    } catch (error) {
+      console.error('Failed to load connections:', error);
     } finally {
       setLoadingWhoop(false);
+      setLoadingOura(false);
     }
   };
 
@@ -75,6 +91,39 @@ export default function Settings() {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to disconnect WHOOP');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleConnectOura = async () => {
+    try {
+      setError('');
+      const redirectUri = `${window.location.origin}/settings/oura/callback`;
+      console.log('Oura Redirect URI:', redirectUri);
+      const { authorization_url } = await apiClient.getOuraAuthURL(redirectUri);
+      console.log('Oura Auth URL:', authorization_url);
+      window.location.href = authorization_url;
+    } catch (err: any) {
+      console.error('Oura connect error:', err);
+      setError(err.response?.data?.detail || 'Failed to connect to Oura');
+    }
+  };
+
+  const handleDisconnectOura = async () => {
+    if (!confirm('Are you sure you want to disconnect your Oura Ring?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      setDisconnecting(true);
+      await apiClient.disconnectOura();
+      setOuraConnection(null);
+      setSuccessMessage('Oura Ring disconnected successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to disconnect Oura');
     } finally {
       setDisconnecting(false);
     }
@@ -433,6 +482,121 @@ export default function Settings() {
             )}
           </div>
 
+          {/* Oura Connection Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">⭕</span>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">Oura Ring Connection</h2>
+            </div>
+
+            {loadingOura ? (
+              <div className="flex items-center gap-3 text-gray-600">
+                <Loader className="w-5 h-5 animate-spin" />
+                <span>Loading connection status...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                    <div className="flex items-center gap-2">
+                      {ouraConnection ? (
+                        <>
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-gray-900 font-medium">Connected</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <span className="text-gray-900 font-medium">Not Connected</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {ouraConnection ? (
+                    <button
+                      onClick={handleDisconnectOura}
+                      disabled={disconnecting}
+                      className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                    >
+                      {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnectOura}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                    >
+                      Connect Oura
+                    </button>
+                  )}
+                </div>
+
+                {ouraConnection && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Connected At</label>
+                      <p className="text-gray-900">
+                        {new Date(ouraConnection.connected_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+
+                    {ouraConnection.last_synced_at && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">Last Synced</label>
+                        <p className="text-gray-900">
+                          {new Date(ouraConnection.last_synced_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Auto-Sync</label>
+                      <p className="text-gray-900">
+                        {ouraConnection.sync_enabled ? 'Enabled' : 'Disabled'}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {!ouraConnection && (
+                  <p className="text-sm text-gray-600 mt-4">
+                    Connect your Oura Ring to automatically sync your health data and get personalized burnout predictions.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Multi-Integration Note */}
+          {whoopConnection && ouraConnection && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-yellow-800">
+                    <strong>Note:</strong> Both WHOOP and Oura are connected.
+                    Your dashboard will display data from the most recently synced device.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Preferences Section */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
@@ -506,7 +670,7 @@ export default function Settings() {
               <ul className="text-sm text-gray-600 space-y-2 mb-4">
                 <li className="flex items-start gap-2">
                   <span className="text-red-500 mt-0.5">•</span>
-                  <span>All your health metrics and WHOOP data</span>
+                  <span>All your health metrics and wearable data</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-red-500 mt-0.5">•</span>
@@ -518,7 +682,7 @@ export default function Settings() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-red-500 mt-0.5">•</span>
-                  <span>Your WHOOP connection</span>
+                  <span>Your WHOOP and Oura connections</span>
                 </li>
               </ul>
               <p className="text-sm text-gray-700 font-medium mb-4">

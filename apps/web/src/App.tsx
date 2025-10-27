@@ -15,6 +15,9 @@ import History from './pages/History';
 import Insights from './pages/Insights';
 import Settings from './pages/Settings';
 import WHOOPCallback from './pages/WHOOPCallback';
+import OuraCallback from './pages/OuraCallback';
+import Privacy from './pages/Privacy';
+import TermsOfService from './pages/TermsOfService';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -38,10 +41,13 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/confirm" element={<AuthConfirm />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/tos" element={<TermsOfService />} />
 
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/settings/whoop/callback" element={<WHOOPCallback />} />
+                <Route path="/settings/oura/callback" element={<OuraCallback />} />
                 <Route element={<Layout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/mood" element={<Mood />} />
