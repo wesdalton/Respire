@@ -76,6 +76,30 @@ class SupabaseAuthService:
             response.raise_for_status()
             return response.json()
 
+    async def get_oauth_url(
+        self,
+        provider: str,
+        redirect_to: Optional[str] = None
+    ) -> str:
+        """
+        Get OAuth authorization URL for a provider (google, github, etc.)
+
+        Args:
+            provider: OAuth provider name (e.g., 'google', 'github')
+            redirect_to: URL to redirect to after authentication
+
+        Returns:
+            OAuth authorization URL
+        """
+        if not redirect_to:
+            redirect_to = os.getenv("APP_URL", "https://app.tryrespire.ai")
+
+        # Supabase OAuth URL
+        oauth_url = f"{self.auth_url}/authorize"
+        params = f"provider={provider}&redirect_to={redirect_to}"
+
+        return f"{oauth_url}?{params}"
+
     async def sign_in(
         self,
         email: str,

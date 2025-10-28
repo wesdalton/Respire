@@ -73,6 +73,37 @@ class SignUpResponse(BaseModel):
     user: Optional[Dict[str, Any]] = None
 
 
+class OAuthURLResponse(BaseModel):
+    url: str
+    provider: str
+
+
+@router.get("/oauth/{provider}/url", response_model=OAuthURLResponse)
+async def get_oauth_url(provider: str):
+    """
+    Get OAuth authorization URL for a provider (google, github, etc.)
+
+    The user should be redirected to this URL to authenticate with the provider.
+    After authentication, they'll be redirected back to your app with tokens.
+    """
+    try:
+        # Get redirect URL from environment or default
+        app_url = os.getenv("APP_URL", "https://app.tryrespire.ai")
+        redirect_to = f"{app_url}/auth/callback"
+
+        oauth_url = await supabase_auth.get_oauth_url(provider, redirect_to)
+
+        return OAuthURLResponse(
+            url=oauth_url,
+            provider=provider
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate OAuth URL: {str(e)}"
+        )
+
+
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def sign_up(request: SignUpRequest):
     """

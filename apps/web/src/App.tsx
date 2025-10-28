@@ -9,6 +9,7 @@ import { Layout } from './components/layout/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthConfirm from './pages/AuthConfirm';
+import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Mood from './pages/Mood';
 import History from './pages/History';
@@ -41,6 +42,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/confirm" element={<AuthConfirm />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/tos" element={<TermsOfService />} />
 

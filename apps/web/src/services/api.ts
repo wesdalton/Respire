@@ -153,6 +153,11 @@ class APIClient {
     return data;
   }
 
+  async getOAuthURL(provider: string): Promise<{ url: string; provider: string }> {
+    const { data } = await this.client.get(`/auth/oauth/${provider}/url`);
+    return data;
+  }
+
   async uploadProfilePicture(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);

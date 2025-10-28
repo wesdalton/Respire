@@ -8,6 +8,7 @@ interface AuthContextType {
   signin: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, firstName?: string, lastName?: string, profilePictureUrl?: string) => Promise<void>;
   signout: () => Promise<void>;
+  setAuthFromCallback: (accessToken: string, refreshToken: string) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -80,6 +81,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const setAuthFromCallback = async (accessToken: string, refreshToken: string) => {
+    // Store tokens
+    apiClient.setToken(accessToken, refreshToken);
+    // Fetch user data
+    try {
+      const userData = await apiClient.getCurrentUser();
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to fetch user after OAuth:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -88,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signin,
         signup,
         signout,
+        setAuthFromCallback,
         isAuthenticated: !!user,
       }}
     >
