@@ -349,8 +349,89 @@ async def sync_oura_data(
     connection.last_synced_at = datetime.utcnow()
     await db.commit()
 
-    # Calculate burnout scores
-    calculator = BurnoutCalculator()
-    await calculator.calculate_burnout_scores(user_id, db)
+    # Auto-calculate burnout after sync if we have data
+    if records_synced > 0:
+        try:
+            from app.models import BurnoutScore, MoodRating
+            from datetime import date
+
+            # Get last 14 days for calculation
+            calc_start_date = date.today() - timedelta(days=14)
+
+            health_calc_result = await db.execute(
+                select(HealthMetric).where(
+                    HealthMetric.user_id == user_id,
+                    HealthMetric.date >= calc_start_date
+                ).order_by(HealthMetric.date)
+            )
+            health_calc_metrics = health_calc_result.scalars().all()
+
+            mood_calc_result = await db.execute(
+                select(MoodRating).where(
+                    MoodRating.user_id == user_id,
+                    MoodRating.date >= calc_start_date
+                ).order_by(MoodRating.date)
+            )
+            mood_calc_ratings = mood_calc_result.scalars().all()
+
+            if health_calc_metrics or mood_calc_ratings:
+                # Convert to dicts
+                health_dicts = [
+                    {
+                        "date": m.date,
+                        "recovery_score": m.recovery_score,
+                        "resting_hr": m.resting_hr,
+                        "hrv": m.hrv,
+                        "sleep_duration_minutes": m.sleep_duration_minutes,
+                        "sleep_quality_score": m.sleep_quality_score,
+                        "day_strain": m.day_strain
+                    }
+                    for m in health_calc_metrics
+                ]
+
+                mood_dicts = [
+                    {"date": m.date, "rating": m.rating}
+                    for m in mood_calc_ratings
+                ]
+
+                # Calculate risk
+                calculator = BurnoutCalculator()
+                risk_analysis = calculator.calculate_overall_risk(
+                    health_metrics=health_dicts,
+                    mood_ratings=mood_dicts
+                )
+
+                # Check if burnout score already exists for today
+                today = date.today()
+                existing_burnout_result = await db.execute(
+                    select(BurnoutScore).where(
+                        BurnoutScore.user_id == user_id,
+                        BurnoutScore.date == today
+                    )
+                )
+                existing_burnout = existing_burnout_result.scalar_one_or_none()
+
+                if existing_burnout:
+                    # Update existing record
+                    existing_burnout.overall_risk_score = risk_analysis["overall_risk_score"]
+                    existing_burnout.risk_factors = risk_analysis["risk_factors"]
+                    existing_burnout.confidence_score = risk_analysis["confidence_score"]
+                    existing_burnout.data_points_used = risk_analysis["data_points_used"]
+                else:
+                    # Create new record
+                    new_burnout = BurnoutScore(
+                        user_id=user_id,
+                        date=today,
+                        overall_risk_score=risk_analysis["overall_risk_score"],
+                        risk_factors=risk_analysis["risk_factors"],
+                        confidence_score=risk_analysis["confidence_score"],
+                        data_points_used=risk_analysis["data_points_used"]
+                    )
+                    db.add(new_burnout)
+
+                await db.commit()
+        except Exception as e:
+            # Don't fail the sync if burnout calculation fails
+            print(f"Burnout calculation error: {str(e)}")
 
     return records_synced
