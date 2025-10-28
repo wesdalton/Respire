@@ -288,18 +288,12 @@ async def sync_oura_data(
         f"{end_date}T23:59:59Z"
     )
 
-    # Check if Oura is the primary data source
+    # Get user preferences for smart fallback
     from app.models import UserPreferences
     prefs_stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
     prefs_result = await db.execute(prefs_stmt)
     user_prefs = prefs_result.scalar_one_or_none()
-
-    # If user has preferences and Oura is not primary, skip sync
-    if user_prefs and user_prefs.primary_data_source != 'oura':
-        raise HTTPException(
-            status_code=400,
-            detail=f"Oura is not your primary data source. Current primary: {user_prefs.primary_data_source}. Change your primary device in settings to sync Oura data."
-        )
+    primary_device = user_prefs.primary_data_source if user_prefs else 'whoop'
 
     # Transform data
     transformer = OuraDataTransformer()
@@ -312,7 +306,7 @@ async def sync_oura_data(
 
     records_synced = 0
 
-    # Upsert health metrics
+    # Upsert health metrics with smart fallback
     for metric_data in health_metrics:
         metric_date = metric_data["date"]
 
@@ -325,11 +319,21 @@ async def sync_oura_data(
         existing_metric = result.scalar_one_or_none()
 
         if existing_metric:
-            # Update existing record
-            for key, value in metric_data.items():
-                if value is not None and key != "date":
-                    setattr(existing_metric, key, value)
-            existing_metric.data_source = "oura"
+            # Smart fallback: Only overwrite if Oura is primary OR existing data is not from primary device
+            should_update = (
+                not existing_metric.data_source or  # No source set (legacy data)
+                primary_device == 'oura' or  # Oura is primary
+                existing_metric.data_source != primary_device  # Existing data is not from primary
+            )
+
+            if should_update:
+                # Update existing record
+                for key, value in metric_data.items():
+                    if value is not None and key != "date":
+                        setattr(existing_metric, key, value)
+                existing_metric.data_source = "oura"
+                records_synced += 1
+            # else: Skip update - primary device data takes precedence
         else:
             # Create new record
             metric = HealthMetric(
@@ -339,8 +343,7 @@ async def sync_oura_data(
                 **{k: v for k, v in metric_data.items() if k != "date"}
             )
             db.add(metric)
-
-        records_synced += 1
+            records_synced += 1
 
     # Update last sync time
     connection.last_synced_at = datetime.utcnow()

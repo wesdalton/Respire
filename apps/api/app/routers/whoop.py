@@ -288,18 +288,12 @@ async def manual_sync(
             connection.token_expires_at = whoop_client.expires_at
             await db.commit()
 
-        # Check if WHOOP is the primary data source
+        # Get user preferences for smart fallback
         from app.models import UserPreferences
         prefs_stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
         prefs_result = await db.execute(prefs_stmt)
         user_prefs = prefs_result.scalar_one_or_none()
-
-        # If user has preferences and WHOOP is not primary, skip sync
-        if user_prefs and user_prefs.primary_data_source != 'whoop':
-            raise HTTPException(
-                status_code=400,
-                detail=f"WHOOP is not your primary data source. Current primary: {user_prefs.primary_data_source}. Change your primary device in settings to sync WHOOP data."
-            )
+        primary_device = user_prefs.primary_data_source if user_prefs else 'whoop'
 
         # Transform WHOOP data to HealthMetric format
         health_metrics = whoop_transformer.transform_sync_data(
@@ -307,7 +301,7 @@ async def manual_sync(
             whoop_data=data
         )
 
-        # Store health metrics in database
+        # Store health metrics in database with smart fallback
         records_inserted = 0
         records_updated = 0
 
@@ -322,14 +316,24 @@ async def manual_sync(
             existing_metric = existing.scalar_one_or_none()
 
             if existing_metric:
-                # Update existing record
-                for key, value in metric_data.items():
-                    if key not in ["user_id", "date"]:
-                        setattr(existing_metric, key, value)
-                records_updated += 1
+                # Smart fallback: Only overwrite if WHOOP is primary OR existing data is not from primary device
+                should_update = (
+                    not existing_metric.data_source or  # No source set (legacy data)
+                    primary_device == 'whoop' or  # WHOOP is primary
+                    existing_metric.data_source != primary_device  # Existing data is not from primary
+                )
+
+                if should_update:
+                    # Update existing record
+                    for key, value in metric_data.items():
+                        if key not in ["user_id", "date"]:
+                            setattr(existing_metric, key, value)
+                    existing_metric.data_source = 'whoop'
+                    records_updated += 1
+                # else: Skip update - primary device data takes precedence
             else:
-                # Insert new record
-                new_metric = HealthMetric(**metric_data)
+                # Insert new record with data source
+                new_metric = HealthMetric(**metric_data, data_source='whoop')
                 db.add(new_metric)
                 records_inserted += 1
 
