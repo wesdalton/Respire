@@ -163,8 +163,8 @@ class APIClient {
       },
     });
 
-    // Return full URL
-    return `${API_URL}${data.url}`;
+    // Return the URL directly (already a full URL from Supabase Storage)
+    return data.url;
   }
 
   // Dashboard
@@ -378,6 +378,17 @@ class APIClient {
 
   async disconnectOura(): Promise<void> {
     await this.client.delete('/oura/connection');
+  }
+
+  // User Preferences
+  async getUserPreferences() {
+    const { data } = await this.client.get('/auth/preferences');
+    return data;
+  }
+
+  async updateUserPreferences(updates: { primary_data_source?: 'whoop' | 'oura' }) {
+    const { data } = await this.client.patch('/auth/preferences', updates);
+    return data;
   }
 }
 

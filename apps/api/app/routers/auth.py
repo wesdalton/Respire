@@ -428,3 +428,56 @@ async def auth_health():
         "service": "authentication",
         "provider": "supabase"
     }
+
+
+# User Preferences Endpoints
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.database import get_db
+from app.models import UserPreferences
+from app.schemas import UserPreferencesResponse, UserPreferencesUpdate
+
+
+@router.get("/preferences", response_model=UserPreferencesResponse)
+async def get_user_preferences(
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get user preferences"""
+    stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
+    result = await db.execute(stmt)
+    prefs = result.scalar_one_or_none()
+
+    if not prefs:
+        # Create default preferences
+        prefs = UserPreferences(user_id=user_id)
+        db.add(prefs)
+        await db.commit()
+        await db.refresh(prefs)
+
+    return prefs
+
+
+@router.patch("/preferences", response_model=UserPreferencesResponse)
+async def update_user_preferences(
+    updates: UserPreferencesUpdate,
+    user_id: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update user preferences"""
+    stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
+    result = await db.execute(stmt)
+    prefs = result.scalar_one_or_none()
+
+    if not prefs:
+        # Create with provided values
+        prefs = UserPreferences(user_id=user_id, **updates.model_dump(exclude_unset=True))
+        db.add(prefs)
+    else:
+        # Update existing
+        for key, value in updates.model_dump(exclude_unset=True).items():
+            setattr(prefs, key, value)
+
+    await db.commit()
+    await db.refresh(prefs)
+    return prefs

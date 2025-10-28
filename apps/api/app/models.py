@@ -212,5 +212,8 @@ class UserPreferences(Base):
     date_format = Column(String, default='YYYY-MM-DD')
     units_system = Column(String, default='metric')
 
+    # Primary data source for health metrics (whoop or oura)
+    primary_data_source = Column(String, default='whoop')
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -199,6 +199,7 @@ class UserPreferencesBase(BaseModel):
     timezone: str = "UTC"
     date_format: str = "YYYY-MM-DD"
     units_system: str = "metric"
+    primary_data_source: str = Field(default="whoop", pattern="^(whoop|oura)$")
 
 
 class UserPreferencesCreate(UserPreferencesBase):
@@ -215,6 +216,7 @@ class UserPreferencesUpdate(BaseModel):
     timezone: Optional[str] = None
     date_format: Optional[str] = None
     units_system: Optional[str] = None
+    primary_data_source: Optional[str] = Field(None, pattern="^(whoop|oura)$")
 
 
 class UserPreferencesResponse(UserPreferencesBase):

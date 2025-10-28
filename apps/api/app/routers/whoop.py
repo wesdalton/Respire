@@ -288,6 +288,19 @@ async def manual_sync(
             connection.token_expires_at = whoop_client.expires_at
             await db.commit()
 
+        # Check if WHOOP is the primary data source
+        from app.models import UserPreferences
+        prefs_stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
+        prefs_result = await db.execute(prefs_stmt)
+        user_prefs = prefs_result.scalar_one_or_none()
+
+        # If user has preferences and WHOOP is not primary, skip sync
+        if user_prefs and user_prefs.primary_data_source != 'whoop':
+            raise HTTPException(
+                status_code=400,
+                detail=f"WHOOP is not your primary data source. Current primary: {user_prefs.primary_data_source}. Change your primary device in settings to sync WHOOP data."
+            )
+
         # Transform WHOOP data to HealthMetric format
         health_metrics = whoop_transformer.transform_sync_data(
             user_id=user_id,

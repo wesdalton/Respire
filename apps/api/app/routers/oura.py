@@ -288,6 +288,19 @@ async def sync_oura_data(
         f"{end_date}T23:59:59Z"
     )
 
+    # Check if Oura is the primary data source
+    from app.models import UserPreferences
+    prefs_stmt = select(UserPreferences).where(UserPreferences.user_id == user_id)
+    prefs_result = await db.execute(prefs_stmt)
+    user_prefs = prefs_result.scalar_one_or_none()
+
+    # If user has preferences and Oura is not primary, skip sync
+    if user_prefs and user_prefs.primary_data_source != 'oura':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Oura is not your primary data source. Current primary: {user_prefs.primary_data_source}. Change your primary device in settings to sync Oura data."
+        )
+
     # Transform data
     transformer = OuraDataTransformer()
     health_metrics = transformer.transform_to_health_metrics(

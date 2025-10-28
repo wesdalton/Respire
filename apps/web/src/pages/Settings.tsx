@@ -17,6 +17,8 @@ export default function Settings() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [primaryDevice, setPrimaryDevice] = useState<'whoop' | 'oura'>('whoop');
+  const [changingPrimary, setChangingPrimary] = useState(false);
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -34,7 +36,31 @@ export default function Settings() {
 
   useEffect(() => {
     loadConnections();
+    loadPreferences();
   }, []);
+
+  const loadPreferences = async () => {
+    try {
+      const prefs = await apiClient.getUserPreferences();
+      setPrimaryDevice(prefs.primary_data_source || 'whoop');
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+    }
+  };
+
+  const handleChangePrimaryDevice = async (device: 'whoop' | 'oura') => {
+    setChangingPrimary(true);
+    try {
+      await apiClient.updateUserPreferences({ primary_data_source: device });
+      setPrimaryDevice(device);
+      setSuccessMessage(`Primary device changed to ${device.toUpperCase()}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to change primary device');
+    } finally {
+      setChangingPrimary(false);
+    }
+  };
 
   const loadConnections = async () => {
     setLoadingWhoop(true);
@@ -571,17 +597,60 @@ export default function Settings() {
             )}
           </div>
 
-          {/* Multi-Integration Note */}
+          {/* Primary Device Selector */}
           {whoopConnection && ouraConnection && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Both WHOOP and Oura are connected.
-                    Your dashboard will display data from the most recently synced device.
-                  </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <SettingsIcon className="w-5 h-5 text-blue-600" />
                 </div>
+                <h3 className="text-lg font-semibold text-gray-900">Primary Data Source</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Both WHOOP and Oura are connected. Choose which device should be your primary source for health metrics.
+                Only your primary device will sync data to prevent conflicts.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleChangePrimaryDevice('whoop')}
+                  disabled={changingPrimary || primaryDevice === 'whoop'}
+                  className={`p-4 rounded-lg border-2 transition ${
+                    primaryDevice === 'whoop'
+                      ? 'border-purple-600 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg">💪</span>
+                    {primaryDevice === 'whoop' && (
+                      <CheckCircle className="w-5 h-5 text-purple-600" />
+                    )}
+                  </div>
+                  <p className="font-semibold text-gray-900">WHOOP</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {primaryDevice === 'whoop' ? 'Current primary' : 'Set as primary'}
+                  </p>
+                </button>
+                <button
+                  onClick={() => handleChangePrimaryDevice('oura')}
+                  disabled={changingPrimary || primaryDevice === 'oura'}
+                  className={`p-4 rounded-lg border-2 transition ${
+                    primaryDevice === 'oura'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg">⭕</span>
+                    {primaryDevice === 'oura' && (
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                    )}
+                  </div>
+                  <p className="font-semibold text-gray-900">Oura Ring</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {primaryDevice === 'oura' ? 'Current primary' : 'Set as primary'}
+                  </p>
+                </button>
               </div>
             </div>
           )}
