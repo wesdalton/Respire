@@ -5,7 +5,7 @@ Handles all interactions with Oura Ring API v2.
 Includes automatic token refresh and pagination support.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Callable, Awaitable
 import httpx
 
@@ -42,7 +42,7 @@ class OuraAPIClient:
             return
 
         # Refresh if token expires in less than 5 minutes
-        if datetime.utcnow() >= self.token_expires_at - timedelta(minutes=5):
+        if datetime.now(timezone.utc) >= self.token_expires_at - timedelta(minutes=5):
             if self.token_refresh_callback:
                 new_tokens = await self.token_refresh_callback(self.refresh_token)
                 self.access_token = new_tokens["access_token"]
