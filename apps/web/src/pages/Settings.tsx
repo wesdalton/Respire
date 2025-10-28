@@ -36,7 +36,8 @@ export default function Settings() {
 
   useEffect(() => {
     loadConnections();
-    loadPreferences();
+    // TODO: Uncomment when preferences endpoint is implemented
+    // loadPreferences();
   }, []);
 
   const loadPreferences = async () => {

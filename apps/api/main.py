@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+import os
 
 from app.database import init_db, close_db, engine
 from app.routers import whoop, auth, mood, health, oura
@@ -52,21 +53,31 @@ app = FastAPI(
 )
 
 # CORS configuration for frontend
+# Get allowed origins from environment variable or use defaults
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+
+# Add default development origins if not in production
+default_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "https://tryrespire.ai",
+    "https://app.tryrespire.ai",
+    "https://www.tryrespire.ai",
+    "https://www.respire.cloud",
+    "https://respire.cloud",
+]
+
+# Combine environment origins with defaults (removing duplicates)
+all_origins = list(set(allowed_origins + default_origins))
+
+print(f"🌐 CORS enabled for origins: {all_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "https://*.vercel.app",
-        "https://tryrespire.ai",
-        "https://app.tryrespire.ai",
-        "https://www.tryrespire.ai",
-        # Legacy domains (if needed during migration)
-        "https://www.respire.cloud",
-        "https://respire.cloud",
-    ],
+    allow_origins=all_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
