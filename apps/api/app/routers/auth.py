@@ -313,9 +313,9 @@ async def upload_profile_picture(
     user_id: str = Depends(get_current_user)
 ):
     """
-    Upload profile picture
+    Upload profile picture to Supabase Storage
 
-    Uploads an image file and returns the URL
+    Uploads an image file to Supabase Storage bucket and returns the public URL
     """
     try:
         # Validate file type
@@ -325,27 +325,61 @@ async def upload_profile_picture(
                 detail="File must be an image"
             )
 
+        # Read file content
+        content = await file.read()
+
+        # Validate file size (max 5MB)
+        if len(content) > 5 * 1024 * 1024:  # 5MB
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size must be less than 5MB"
+            )
+
         # Generate unique filename
         file_ext = Path(file.filename or 'image.jpg').suffix
         unique_filename = f"{user_id}_{uuid.uuid4()}{file_ext}"
 
-        # Create uploads directory if it doesn't exist
-        upload_dir = Path("uploads/profile-pictures")
-        upload_dir.mkdir(parents=True, exist_ok=True)
+        # Upload to Supabase Storage
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_service_key = os.getenv("SUPABASE_SERVICE_KEY")
 
-        # Save file
-        file_path = upload_dir / unique_filename
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
+        if not supabase_url or not supabase_service_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Storage configuration missing"
+            )
 
-        # Return URL (relative path for now)
-        # In production, this would be a full URL to cloud storage
-        file_url = f"/uploads/profile-pictures/{unique_filename}"
+        # Upload file to Supabase Storage bucket "profile-pictures"
+        storage_url = f"{supabase_url}/storage/v1/object/profile-pictures/{unique_filename}"
 
-        return {"url": file_url}
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                storage_url,
+                headers={
+                    "Authorization": f"Bearer {supabase_service_key}",
+                    "Content-Type": file.content_type or "image/jpeg",
+                },
+                content=content,
+                timeout=30.0
+            )
 
+            if response.status_code not in [200, 201]:
+                print(f"Supabase storage error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to upload to storage: {response.text}"
+                )
+
+        # Return public URL
+        public_url = f"{supabase_url}/storage/v1/object/public/profile-pictures/{unique_filename}"
+
+        return {"url": public_url}
+
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Upload error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload file: {str(e)}"
