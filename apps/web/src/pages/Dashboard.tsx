@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Activity, Heart, Zap, Moon, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, Heart, Zap, Moon, RefreshCw, AlertCircle, ChevronLeft, ChevronRight, Link as LinkIcon } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { usePageTitle } from '../hooks/usePageTitle';
 import MetricsCard from '../components/dashboard/MetricsCard';
@@ -11,17 +11,44 @@ import MoodEntry from '../components/mood/MoodEntry';
 import { apiClient } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatRelativeTime, parseLocalDate } from '../utils/dateUtils';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
+  const navigate = useNavigate();
 
   // Start with undefined to let backend determine the initial date
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [hasWhoopConnection, setHasWhoopConnection] = useState(false);
+  const [hasOuraConnection, setHasOuraConnection] = useState(false);
+  const [primaryDevice, setPrimaryDevice] = useState<'whoop' | 'oura'>('whoop');
+  const [checkingConnections, setCheckingConnections] = useState(true);
 
   // Format date as YYYY-MM-DD for API (undefined on first load)
   const selectedDateStr = selectedDate ? selectedDate.toISOString().split('T')[0] : undefined;
 
   const { dashboard, isLoading, error, refetch, sync, isSyncing } = useDashboard(selectedDateStr);
+
+  // Check device connections on mount
+  useEffect(() => {
+    const checkConnections = async () => {
+      try {
+        const [whoopConn, ouraConn, prefs] = await Promise.all([
+          apiClient.getWHOOPConnection().catch(() => null),
+          apiClient.getOuraConnection().catch(() => null),
+          apiClient.getUserPreferences().catch(() => ({ primary_data_source: 'whoop' }))
+        ]);
+        setHasWhoopConnection(!!whoopConn);
+        setHasOuraConnection(!!ouraConn);
+        setPrimaryDevice(prefs.primary_data_source || 'whoop');
+      } catch (err) {
+        console.error('Failed to check connections:', err);
+      } finally {
+        setCheckingConnections(false);
+      }
+    };
+    checkConnections();
+  }, []);
 
   // Set initial date from backend response
   if (!selectedDate && dashboard?.metrics) {
@@ -82,7 +109,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleSyncWHOOP = () => {
+  const handleSyncOrConnect = () => {
+    // If no devices connected, redirect to settings
+    if (!hasWhoopConnection && !hasOuraConnection) {
+      navigate('/settings');
+      return;
+    }
+    // Otherwise, sync
     sync();
   };
 
@@ -235,12 +268,25 @@ export default function Dashboard() {
               {showMoodEntry ? 'Hide' : hasTodaysMood ? 'Edit Mood' : 'Log Mood'}
             </button>
             <button
-              onClick={handleSyncWHOOP}
-              disabled={isSyncing}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSyncOrConnect}
+              disabled={isSyncing || checkingConnections}
+              className={`${
+                !hasWhoopConnection && !hasOuraConnection
+                  ? 'bg-purple-600 hover:bg-purple-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Syncing...' : 'Sync WHOOP'}
+              {!hasWhoopConnection && !hasOuraConnection ? (
+                <>
+                  <LinkIcon className="w-4 h-4" />
+                  Connect Device
+                </>
+              ) : (
+                <>
+                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : `Sync ${primaryDevice === 'whoop' ? 'WHOOP' : 'Oura'}`}
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -360,14 +406,31 @@ export default function Dashboard() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center h-full flex flex-col items-center justify-center">
                 <Activity className="w-12 h-12 text-gray-300 mb-3" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No Health Data Yet</h3>
-                <p className="text-gray-600 mb-4">Sync your WHOOP data to see health trends</p>
+                <p className="text-gray-600 mb-4">
+                  {!hasWhoopConnection && !hasOuraConnection
+                    ? 'Connect a device to start tracking your health'
+                    : 'Sync your device to see health trends'}
+                </p>
                 <button
-                  onClick={handleSyncWHOOP}
-                  disabled={isSyncing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 disabled:opacity-50"
+                  onClick={handleSyncOrConnect}
+                  disabled={isSyncing || checkingConnections}
+                  className={`${
+                    !hasWhoopConnection && !hasOuraConnection
+                      ? 'bg-purple-600 hover:bg-purple-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 inline-flex items-center gap-2 disabled:opacity-50`}
                 >
-                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? 'Syncing...' : 'Sync Now'}
+                  {!hasWhoopConnection && !hasOuraConnection ? (
+                    <>
+                      <LinkIcon className="w-4 h-4" />
+                      Connect Device
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                      {isSyncing ? 'Syncing...' : 'Sync Now'}
+                    </>
+                  )}
                 </button>
               </div>
             )}
