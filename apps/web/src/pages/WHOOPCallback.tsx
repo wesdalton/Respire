@@ -24,14 +24,14 @@ export default function WHOOPCallback() {
       if (error) {
         setStatus('error');
         setMessage(`WHOOP authorization failed: ${error}`);
-        setTimeout(() => navigate('/settings'), 3000);
+        setTimeout(() => navigate('/dashboard'), 3000);
         return;
       }
 
       if (!code) {
         setStatus('error');
         setMessage('No authorization code received from WHOOP');
-        setTimeout(() => navigate('/settings'), 3000);
+        setTimeout(() => navigate('/dashboard'), 3000);
         return;
       }
 
@@ -42,12 +42,12 @@ export default function WHOOPCallback() {
         await apiClient.connectWHOOP(code, redirectUri);
         setStatus('success');
         setMessage('Successfully connected to WHOOP!');
-        setTimeout(() => navigate('/settings'), 2000);
+        setTimeout(() => navigate('/dashboard'), 2000);
       } catch (err: any) {
         console.error('WHOOP callback error:', err);
         setStatus('error');
         setMessage(err.response?.data?.detail || 'Failed to connect to WHOOP');
-        setTimeout(() => navigate('/settings'), 3000);
+        setTimeout(() => navigate('/dashboard'), 3000);
       }
     };
 
@@ -73,7 +73,7 @@ export default function WHOOPCallback() {
               </div>
               <h2 className="text-xl font-semibold text-gray-900">Success!</h2>
               <p className="text-gray-600">{message}</p>
-              <p className="text-sm text-gray-500">Redirecting to settings...</p>
+              <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
             </>
           )}
 
@@ -84,7 +84,7 @@ export default function WHOOPCallback() {
               </div>
               <h2 className="text-xl font-semibold text-gray-900">Connection Failed</h2>
               <p className="text-gray-600">{message}</p>
-              <p className="text-sm text-gray-500">Redirecting to settings...</p>
+              <p className="text-sm text-gray-500">Redirecting to dashboard...</p>
             </>
           )}
         </div>
