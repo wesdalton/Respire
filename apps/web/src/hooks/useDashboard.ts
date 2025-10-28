@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiClient } from '../services/api';
 
 const AUTO_SYNC_INTERVAL_HOURS = 6; // Auto-sync if last sync was more than 6 hours ago
@@ -7,6 +7,7 @@ const AUTO_SYNC_INTERVAL_HOURS = 6; // Auto-sync if last sync was more than 6 ho
 export function useDashboard(selectedDate?: string) {
   const queryClient = useQueryClient();
   const autoSyncAttempted = useRef(false);
+  const [primaryDevice, setPrimaryDevice] = useState<'whoop' | 'oura'>('whoop');
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['dashboard', selectedDate],
@@ -47,8 +48,24 @@ export function useDashboard(selectedDate?: string) {
     }
   }, [selectedDate, queryClient]);
 
+  // Load primary device preference
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const prefs = await apiClient.getUserPreferences();
+        setPrimaryDevice(prefs.primary_data_source || 'whoop');
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+      }
+    };
+    loadPreferences();
+  }, []);
+
   const syncMutation = useMutation({
-    mutationFn: () => apiClient.syncWHOOP(),
+    mutationFn: () => {
+      // Sync based on primary device
+      return primaryDevice === 'oura' ? apiClient.syncOura() : apiClient.syncWHOOP();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['health'] });
