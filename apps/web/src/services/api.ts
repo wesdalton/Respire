@@ -377,7 +377,7 @@ class APIClient {
   }
 
   async disconnectOura(): Promise<void> {
-    await this.client.delete('/oura/connection');
+    await this.client.post('/oura/disconnect');
   }
 
   // User Preferences
