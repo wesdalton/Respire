@@ -25,9 +25,12 @@ class OuraOAuthService:
         "personal",
         "daily",
         "heartrate",
+        "tag",
         "workout",
         "session",
-        "spo2"
+        "spo2",
+        "ring_configuration",
+        "stress"
     ]
 
     def __init__(
