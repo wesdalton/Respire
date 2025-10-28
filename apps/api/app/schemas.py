@@ -1,7 +1,7 @@
 """
 API Request/Response Schemas using Pydantic
 """
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_serializer
 from typing import Optional, List, Dict, Any
 from datetime import date, datetime
 from uuid import UUID

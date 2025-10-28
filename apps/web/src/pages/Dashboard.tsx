@@ -10,6 +10,7 @@ import InsightCard from '../components/dashboard/InsightCard';
 import MoodEntry from '../components/mood/MoodEntry';
 import { apiClient } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatRelativeTime, parseLocalDate } from '../utils/dateUtils';
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
@@ -38,7 +39,8 @@ export default function Dashboard() {
     }
 
     if (initialDate) {
-      setSelectedDate(new Date(initialDate));
+      // Parse as local date to avoid timezone issues
+      setSelectedDate(parseLocalDate(initialDate));
     } else {
       // Fallback to yesterday if no data
       const yesterday = new Date();
@@ -216,7 +218,7 @@ export default function Dashboard() {
               Track your health metrics and burnout risk
               {metrics?.last_sync && (
                 <span className="ml-2 text-sm">
-                  • Last synced: {new Date(metrics.last_sync).toLocaleString()}
+                  • Last synced: {formatRelativeTime(metrics.last_sync)}
                 </span>
               )}
             </p>
